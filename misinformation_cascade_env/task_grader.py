@@ -72,15 +72,22 @@ def resolve_tasks(task_selector: str | None) -> list[CascadeTask]:
         return list_tasks()
 
     selected: list[CascadeTask] = []
+    seen: set[str] = set()
     for raw in task_selector.split(","):
         key = raw.strip()
         if not key:
             continue
         if key in TASKS_BY_ID:
-            selected.append(TASKS_BY_ID[key])
+            task = TASKS_BY_ID[key]
+            if task.task_id not in seen:
+                selected.append(task)
+                seen.add(task.task_id)
             continue
         if key in TASKS_BY_DIFFICULTY:
-            selected.append(TASKS_BY_DIFFICULTY[key])
+            task = TASKS_BY_DIFFICULTY[key]
+            if task.task_id not in seen:
+                selected.append(task)
+                seen.add(task.task_id)
             continue
         valid = sorted(list(TASKS_BY_ID) + list(TASKS_BY_DIFFICULTY))
         raise ValueError(f"Unknown task selector '{key}'. Valid values: {valid}")

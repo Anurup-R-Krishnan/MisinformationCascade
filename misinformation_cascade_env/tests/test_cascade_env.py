@@ -1,3 +1,5 @@
+import pytest
+
 from misinformation_cascade_env.env import MisinformationCascadeEnv
 from misinformation_cascade_env.models import CascadeAction
 from misinformation_cascade_env.task_grader import grade_episode, list_tasks
@@ -66,3 +68,24 @@ def test_task_grader_and_registry_contract():
 
     score = grade_episode(obs, rewards)
     assert 0.0 <= score <= 1.0
+
+
+def test_step_after_done_raises_runtime_error():
+    env = MisinformationCascadeEnv(difficulty="easy", seed=42)
+    obs = env.reset(seed=42)
+    while not obs.done:
+        obs = env.step(CascadeAction(action_type="WAIT"))
+
+    with pytest.raises(RuntimeError):
+        env.step(CascadeAction(action_type="WAIT"))
+
+
+def test_insufficient_budget_action_is_rejected_without_spend():
+    env = MisinformationCascadeEnv(difficulty="easy", seed=42)
+    obs = env.reset(seed=42)
+    target_id = obs.top_nodes[0].node_id
+    env._budget = 0  # test edge-case budget floor behavior
+
+    obs = env.step(CascadeAction(action_type="INOCULATE", target_node_id=target_id))
+    assert "Insufficient budget" in obs.last_action_effect
+    assert obs.budget_remaining == 0

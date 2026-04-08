@@ -45,6 +45,8 @@ BENCHMARK = os.getenv("MY_ENV_V4_BENCHMARK") or "misinformation_cascade_env"
 TASK_SELECTOR = os.getenv("CASCADE_TASKS") or "easy,medium,hard"
 TEMPERATURE = float(os.getenv("TEMPERATURE", "0.0"))
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "180"))
+API_TIMEOUT_S = float(os.getenv("API_TIMEOUT_S", "20"))
+API_MAX_RETRIES = int(os.getenv("API_MAX_RETRIES", "1"))
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -52,7 +54,7 @@ def log_start(task: str, env: str, model: str) -> None:
 
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
-    error_val = error if error else "null"
+    error_val = sanitize_log_value(error) if error else "null"
     done_val = str(done).lower()
     print(
         f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
@@ -75,7 +77,12 @@ def build_openai_client() -> Optional[Any]:
         raise RuntimeError(
             "HF_TOKEN/API_KEY is set but `openai` package is missing. Install with `uv sync`."
         )
-    return OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    return OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY,
+        timeout=API_TIMEOUT_S,
+        max_retries=API_MAX_RETRIES,
+    )
 
 
 def pick_action(
@@ -92,6 +99,7 @@ def pick_action(
             model=MODEL_NAME,
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
+            timeout=API_TIMEOUT_S,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
@@ -145,6 +153,12 @@ def extract_last_action_error(last_action_effect: str) -> Optional[str]:
     else:
         detail = last_action_effect
     return detail.split("Step consumed", 1)[0].strip()
+
+
+def sanitize_log_value(value: Optional[str]) -> str:
+    if value is None:
+        return "null"
+    return " ".join(str(value).split())
 
 
 def run_task(task, client: Optional[Any]) -> float:

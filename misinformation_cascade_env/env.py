@@ -605,8 +605,6 @@ class MisinformationCascadeEnv:
 
         self._prev_damage = current_damage
 
-        # ADDED: Warn about isolated infected subgraphs (silent spread)
-        isolated_components = self._detect_isolated_infected_subgraphs()
         if isolated_components:
             effect += (
                 f" | WARNING: {len(isolated_components)} isolated infected component(s) exists. "
