@@ -10,13 +10,12 @@ from typing import Dict
 
 from openenv.core import EnvClient
 from openenv.core.client_types import StepResult
-from openenv.core.env_server.types import State
 
-from .models import MisinformationCascadeAction, MisinformationCascadeObservation
+from .models import CascadeAction, CascadeObservation, CascadeState
 
 
 class MisinformationCascadeEnv(
-    EnvClient[MisinformationCascadeAction, MisinformationCascadeObservation, State]
+    EnvClient[CascadeAction, CascadeObservation, CascadeState]
 ):
     """
     Client for the Misinformation Cascade Env Environment.
@@ -29,52 +28,50 @@ class MisinformationCascadeEnv(
         >>> # Connect to a running server
         >>> with MisinformationCascadeEnv(base_url="http://localhost:8000") as client:
         ...     result = client.reset()
-        ...     print(result.observation.echoed_message)
+        ...     print(result.observation.infected_count)
         ...
-        ...     result = client.step(MisinformationCascadeAction(message="Hello!"))
-        ...     print(result.observation.echoed_message)
+        ...     result = client.step(CascadeAction(action_type="WAIT"))
+        ...     print(result.observation.budget_remaining)
 
     Example with Docker:
         >>> # Automatically start container and connect
         >>> client = MisinformationCascadeEnv.from_docker_image("misinformation_cascade_env-env:latest")
         >>> try:
         ...     result = client.reset()
-        ...     result = client.step(MisinformationCascadeAction(message="Test"))
+        ...     result = client.step(CascadeAction(action_type="WAIT"))
         ... finally:
         ...     client.close()
     """
 
-    def _step_payload(self, action: MisinformationCascadeAction) -> Dict:
+    def _step_payload(self, action: CascadeAction) -> Dict:
         """
-        Convert MisinformationCascadeAction to JSON payload for step message.
+        Convert CascadeAction to JSON payload for step message.
 
         Args:
-            action: MisinformationCascadeAction instance
+            action: CascadeAction instance
 
         Returns:
             Dictionary representation suitable for JSON encoding
         """
-        return {
-            "message": action.message,
-        }
+        return action.model_dump(exclude_none=True)
 
-    def _parse_result(self, payload: Dict) -> StepResult[MisinformationCascadeObservation]:
+    def _parse_result(self, payload: Dict) -> StepResult[CascadeObservation]:
         """
-        Parse server response into StepResult[MisinformationCascadeObservation].
+        Parse server response into StepResult[CascadeObservation].
 
         Args:
             payload: JSON response data from server
 
         Returns:
-            StepResult with MisinformationCascadeObservation
+            StepResult with CascadeObservation
         """
         obs_data = payload.get("observation", {})
-        observation = MisinformationCascadeObservation(
-            echoed_message=obs_data.get("echoed_message", ""),
-            message_length=obs_data.get("message_length", 0),
-            done=payload.get("done", False),
-            reward=payload.get("reward"),
-            metadata=obs_data.get("metadata", {}),
+        observation = CascadeObservation.model_validate(
+            {
+                **obs_data,
+                "done": payload.get("done", obs_data.get("done", False)),
+                "reward": payload.get("reward", obs_data.get("reward", 0.0)),
+            }
         )
 
         return StepResult(
@@ -83,7 +80,7 @@ class MisinformationCascadeEnv(
             done=payload.get("done", False),
         )
 
-    def _parse_state(self, payload: Dict) -> State:
+    def _parse_state(self, payload: Dict) -> CascadeState:
         """
         Parse server response into State object.
 
@@ -93,7 +90,4 @@ class MisinformationCascadeEnv(
         Returns:
             State object with episode_id and step_count
         """
-        return State(
-            episode_id=payload.get("episode_id"),
-            step_count=payload.get("step_count", 0),
-        )
+        return CascadeState.model_validate(payload)

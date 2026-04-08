@@ -36,20 +36,20 @@ except Exception as e:  # pragma: no cover
     ) from e
 
 try:
-    from ..models import MisinformationCascadeAction, MisinformationCascadeObservation
+    from ..models import CascadeAction, CascadeObservation
     from .misinformation_cascade_env_environment import MisinformationCascadeEnvironment
-except ModuleNotFoundError:
-    from models import MisinformationCascadeAction, MisinformationCascadeObservation
+except ImportError:
+    from models import CascadeAction, CascadeObservation
     from server.misinformation_cascade_env_environment import MisinformationCascadeEnvironment
 
 
 # Create the app with web interface and README integration
 app = create_app(
     MisinformationCascadeEnvironment,
-    MisinformationCascadeAction,
-    MisinformationCascadeObservation,
+    CascadeAction,
+    CascadeObservation,
     env_name="misinformation_cascade_env",
-    max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
+    max_concurrent_envs=4,
 )
 
 
@@ -80,5 +80,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--host", type=str, default="0.0.0.0")
     args = parser.parse_args()
-    main(port=args.port)
+    if args.host == "0.0.0.0" and args.port == 8000:
+        main()
+    else:
+        main(host=args.host, port=args.port)

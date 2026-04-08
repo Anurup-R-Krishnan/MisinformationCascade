@@ -5,100 +5,64 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Misinformation Cascade Env Environment Implementation.
-
-A simple test environment that echoes back messages sent to it.
-Perfect for testing HTTP server infrastructure.
+OpenEnv server adapter for the misinformation cascade simulator.
 """
 
-from uuid import uuid4
+from __future__ import annotations
+
+from typing import Any, Optional
 
 from openenv.core.env_server.interfaces import Environment
-from openenv.core.env_server.types import State
 
 try:
-    from ..models import MisinformationCascadeAction, MisinformationCascadeObservation
+    from ..env import MisinformationCascadeEnv as CascadeSimulator
+    from ..models import CascadeAction, CascadeObservation, CascadeState
 except ImportError:
-    from models import MisinformationCascadeAction, MisinformationCascadeObservation
+    from env import MisinformationCascadeEnv as CascadeSimulator
+    from models import CascadeAction, CascadeObservation, CascadeState
 
 
-class MisinformationCascadeEnvironment(Environment):
+class MisinformationCascadeEnvironment(
+    Environment[CascadeAction, CascadeObservation, CascadeState]
+):
     """
-    A simple echo environment that echoes back messages.
-
-    This environment is designed for testing the HTTP server infrastructure.
-    It maintains minimal state and simply echoes back whatever message it receives.
-
-    Example:
-        >>> env = MisinformationCascadeEnvironment()
-        >>> obs = env.reset()
-        >>> print(obs.echoed_message)  # "Misinformation Cascade Env environment ready!"
-        >>>
-        >>> obs = env.step(MisinformationCascadeAction(message="Hello"))
-        >>> print(obs.echoed_message)  # "Hello"
-        >>> print(obs.message_length)  # 5
+    OpenEnv-compatible environment implementation for the cascade task.
     """
 
-    # Enable concurrent WebSocket sessions.
-    # Set to True if your environment isolates state between instances.
-    # When True, multiple WebSocket clients can connect simultaneously, each
-    # getting their own environment instance (when using factory mode in app.py).
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
 
-    def __init__(self):
-        """Initialize the misinformation_cascade_env environment."""
-        self._state = State(episode_id=str(uuid4()), step_count=0)
-        self._reset_count = 0
+    def __init__(self, difficulty: str = "medium", seed: Optional[int] = None):
+        self._difficulty = difficulty
+        self._seed = seed
+        self._sim = CascadeSimulator(difficulty=difficulty, seed=seed)
+        self._last_seed: Optional[int] = seed
 
-    def reset(self) -> MisinformationCascadeObservation:
-        """
-        Reset the environment.
+    def reset(
+        self,
+        seed: Optional[int] = None,
+        episode_id: Optional[str] = None,
+        **kwargs: Any,
+    ) -> CascadeObservation:
+        if "difficulty" in kwargs and kwargs["difficulty"] != self._difficulty:
+            self._difficulty = kwargs["difficulty"]
+            self._sim = CascadeSimulator(difficulty=self._difficulty, seed=seed)
 
-        Returns:
-            MisinformationCascadeObservation with a ready message
-        """
-        self._state = State(episode_id=str(uuid4()), step_count=0)
-        self._reset_count += 1
+        # episode_id is accepted for OpenEnv contract parity; simulator generates ids.
+        _ = episode_id
 
-        return MisinformationCascadeObservation(
-            echoed_message="Misinformation Cascade Env environment ready!",
-            message_length=0,
-            done=False,
-            reward=0.0,
-        )
+        self._last_seed = seed if seed is not None else self._seed
+        return self._sim.reset(seed=self._last_seed)
 
-    def step(self, action: MisinformationCascadeAction) -> MisinformationCascadeObservation:  # type: ignore[override]
-        """
-        Execute a step in the environment by echoing the message.
-
-        Args:
-            action: MisinformationCascadeAction containing the message to echo
-
-        Returns:
-            MisinformationCascadeObservation with the echoed message and its length
-        """
-        self._state.step_count += 1
-
-        message = action.message
-        length = len(message)
-
-        # Simple reward: longer messages get higher rewards
-        reward = length * 0.1
-
-        return MisinformationCascadeObservation(
-            echoed_message=message,
-            message_length=length,
-            done=False,
-            reward=reward,
-            metadata={"original_message": message, "step": self._state.step_count},
-        )
+    def step(
+        self,
+        action: CascadeAction,
+        timeout_s: Optional[float] = None,
+        **kwargs: Any,
+    ) -> CascadeObservation:
+        _ = timeout_s
+        _ = kwargs
+        return self._sim.step(action)
 
     @property
-    def state(self) -> State:
-        """
-        Get the current environment state.
-
-        Returns:
-            Current State with episode_id and step_count
-        """
-        return self._state
+    def state(self) -> CascadeState:
+        return CascadeState.model_validate(self._sim.state())

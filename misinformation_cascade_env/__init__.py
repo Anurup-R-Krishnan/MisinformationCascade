@@ -6,11 +6,16 @@
 
 """Misinformation Cascade Env Environment."""
 
-from .client import MisinformationCascadeEnv
-from .models import MisinformationCascadeAction, MisinformationCascadeObservation
+from .models import CascadeAction, CascadeObservation, CascadeState
+
+try:
+    from .client import MisinformationCascadeEnv
+except Exception:  # pragma: no cover - allows local simulator imports without openenv
+    MisinformationCascadeEnv = None  # type: ignore[assignment]
 
 __all__ = [
-    "MisinformationCascadeAction",
-    "MisinformationCascadeObservation",
+    "CascadeAction",
+    "CascadeObservation",
+    "CascadeState",
     "MisinformationCascadeEnv",
 ]

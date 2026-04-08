@@ -1,0 +1,74 @@
+{
+  "episodes": 20,
+  "results": {
+    "wait": {
+      "easy": {
+        "avg_reward": 0.0,
+        "avg_steps": 15,
+        "avg_final_infected": 19.45,
+        "avg_final_quarantined": 0,
+        "avg_final_inoculated": 0
+      },
+      "medium": {
+        "avg_reward": 0.0,
+        "avg_steps": 20,
+        "avg_final_infected": 35,
+        "avg_final_quarantined": 0,
+        "avg_final_inoculated": 0
+      },
+      "hard": {
+        "avg_reward": 0.0,
+        "avg_steps": 25,
+        "avg_final_infected": 50,
+        "avg_final_quarantined": 0,
+        "avg_final_inoculated": 0
+      }
+    },
+    "random": {
+      "easy": {
+        "avg_reward": 0.1844,
+        "avg_steps": 15,
+        "avg_final_infected": 15.95,
+        "avg_final_quarantined": 2,
+        "avg_final_inoculated": 0.95
+      },
+      "medium": {
+        "avg_reward": 0.1482,
+        "avg_steps": 17.8,
+        "avg_final_infected": 31.5,
+        "avg_final_quarantined": 1.7,
+        "avg_final_inoculated": 1.25
+      },
+      "hard": {
+        "avg_reward": 0.125,
+        "avg_steps": 16.6,
+        "avg_final_infected": 47,
+        "avg_final_quarantined": 1.45,
+        "avg_final_inoculated": 1.25
+      }
+    },
+    "greedy_containment": {
+      "easy": {
+        "avg_reward": 0.7632,
+        "avg_steps": 3,
+        "avg_final_infected": 0,
+        "avg_final_quarantined": 3,
+        "avg_final_inoculated": 0
+      },
+      "medium": {
+        "avg_reward": 0.4468,
+        "avg_steps": 20,
+        "avg_final_infected": 30.35,
+        "avg_final_quarantined": 4,
+        "avg_final_inoculated": 0
+      },
+      "hard": {
+        "avg_reward": 0.1853,
+        "avg_steps": 11.5,
+        "avg_final_infected": 45.3,
+        "avg_final_quarantined": 4,
+        "avg_final_inoculated": 0
+      }
+    }
+  }
+}

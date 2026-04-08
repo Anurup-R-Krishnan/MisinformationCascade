@@ -1,8 +1,8 @@
 ---
-title: Misinformation Cascade Env Environment Server
-emoji: 🥋
-colorFrom: green
-colorTo: yellow
+title: Misinformation Cascade Env
+emoji: 🛡️
+colorFrom: red
+colorTo: blue
 sdk: docker
 pinned: false
 app_port: 8000
@@ -11,245 +11,134 @@ tags:
   - openenv
 ---
 
-# Misinformation Cascade Env Environment
+# Misinformation Cascade Env
 
-A simple test environment that echoes back messages. Perfect for testing the env APIs as well as demonstrating environment usage patterns.
+An OpenEnv environment for strategic containment of misinformation spread on a social graph.
 
-## Quick Start
+## Round-1 Tasks (Easy -> Medium -> Hard)
 
-The simplest way to use the Misinformation Cascade Env environment is through the `MisinformationCascadeEnv` class:
+This environment ships with three deterministic tasks and programmatic graders:
 
-```python
-from misinformation_cascade_env import MisinformationCascadeAction, MisinformationCascadeEnv
+1. `cascade-easy` (`difficulty=easy`, `seed=42`)
+2. `cascade-medium` (`difficulty=medium`, `seed=137`)
+3. `cascade-hard` (`difficulty=hard`, `seed=512`)
 
-try:
-    # Create environment from Docker image
-    misinformation_cascade_envenv = MisinformationCascadeEnv.from_docker_image("misinformation_cascade_env-env:latest")
+Task definitions and grader logic live in `task_grader.py`:
 
-    # Reset
-    result = misinformation_cascade_envenv.reset()
-    print(f"Reset: {result.observation.echoed_message}")
+- `grade_episode(...)` returns a deterministic normalized score in `[0.0, 1.0]`.
+- `is_task_success(...)` maps score to pass/fail with task-specific thresholds.
 
-    # Send multiple messages
-    messages = ["Hello, World!", "Testing echo", "Final message"]
+## Environment Objective
 
-    for msg in messages:
-        result = misinformation_cascade_envenv.step(MisinformationCascadeAction(message=msg))
-        print(f"Sent: '{msg}'")
-        print(f"  → Echoed: '{result.observation.echoed_message}'")
-        print(f"  → Length: {result.observation.message_length}")
-        print(f"  → Reward: {result.reward}")
+- Goal: maximize final containment score by minimizing infection damage vs a no-action baseline.
+- Environment has hidden infection state (`LATENT`) and visible state (`AT_RISK` / `CONFIRMED_INFECTED`).
+- Agent operates under finite budget and step limits.
 
-finally:
-    # Always clean up
-    misinformation_cascade_envenv.close()
-```
+## Action Space
 
-That's it! The `MisinformationCascadeEnv.from_docker_image()` method handles:
-- Starting the Docker container
-- Waiting for the server to be ready
-- Connecting to the environment
-- Container cleanup when you call `close()`
+`CascadeAction`
 
-## Building the Docker Image
+- `action_type`: `FACTCHECK` | `QUARANTINE` | `INOCULATE` | `BOOST_CORRECTION` | `WAIT`
+- `target_node_id`: required for all actions except `WAIT`
+- `reasoning`: optional string
 
-Before using the environment, you need to build the Docker image:
+Action costs:
+
+- `WAIT`: 0
+- `FACTCHECK`: 1
+- `BOOST_CORRECTION`: 2
+- `INOCULATE`: 3
+- `QUARANTINE`: 5
+
+## Observation Space
+
+`CascadeObservation`
+
+- `top_nodes`: top influential nodes
+- `confirmed_infected`: currently confirmed infected nodes
+- `at_risk_nodes`: exposed nodes (deduplicated from `top_nodes`)
+- Counters: budget/step/remaining nodes and class counts
+- `spread_delta_last_step`, `last_action_effect`
+- `done`, `reward`
+
+## Reward and Termination
+
+- Non-terminal reward: shaped step reward from containment progress vs null spread.
+- Terminal reward: counterfactual containment score in `[0.0, 1.0]`.
+- Episode ends on first of:
+  - eradication (`CONFIRMED_INFECTED == 0`)
+  - saturation mercy threshold with zero budget
+  - max step horizon
+
+## Difficulty Presets
+
+- `easy`: 20 nodes, 3 seed infections, 15 steps, Erdos-Renyi
+- `medium`: 35 nodes, 5 seed infections, 20 steps, Erdos-Renyi
+- `hard`: 50 nodes, 7 seed infections, 25 steps, Barabasi-Albert + external seeding
+
+## Local Development
 
 ```bash
-# From project root
-docker build -t misinformation_cascade_env-env:latest -f server/Dockerfile .
+# from this directory
+uv sync
+uv run server
 ```
 
-## Deploying to Hugging Face Spaces
-
-You can easily deploy your OpenEnv environment to Hugging Face Spaces using the `openenv push` command:
+## Validation
 
 ```bash
-# From the environment directory (where openenv.yaml is located)
+openenv validate
+openenv validate --url http://localhost:8000
+```
+
+## Required Baseline Inference Script
+
+The hackathon-required inference script is provided as root-level `inference.py`.
+
+Mandatory env vars:
+
+- `API_BASE_URL` (LLM endpoint)
+- `MODEL_NAME` (LLM model id)
+- `HF_TOKEN` (auth token; `API_KEY`/`OPENAI_API_KEY` also accepted)
+
+Run:
+
+```bash
+python inference.py
+```
+
+Behavior:
+
+- Uses OpenAI client for model calls.
+- Runs all 3 tasks by default (`easy,medium,hard`).
+- Emits strict logs:
+  - `[START] task=... env=... model=...`
+  - `[STEP] step=... action=... reward=... done=... error=...`
+  - `[END] success=... steps=... score=... rewards=...`
+
+## Benchmarking
+
+```bash
+python -m misinformation_cascade_env.evaluate --episodes 20
+cat artifacts/benchmark_results.json
+```
+
+Latest benchmark snapshot: `BENCHMARK_REPORT.md`
+
+## Docker
+
+```bash
+openenv build
+docker run --rm -p 8000:8000 openenv-misinformation_cascade
+```
+
+## Deployment
+
+```bash
 openenv push
-
-# Or specify options
-openenv push --namespace my-org --private
 ```
 
-The `openenv push` command will:
-1. Validate that the directory is an OpenEnv environment (checks for `openenv.yaml`)
-2. Prepare a custom build for Hugging Face Docker space (enables web interface)
-3. Upload to Hugging Face (ensuring you're logged in)
+## Reproducibility
 
-### Prerequisites
-
-- Authenticate with Hugging Face: The command will prompt for login if not already authenticated
-
-### Options
-
-- `--directory`, `-d`: Directory containing the OpenEnv environment (defaults to current directory)
-- `--repo-id`, `-r`: Repository ID in format 'username/repo-name' (defaults to 'username/env-name' from openenv.yaml)
-- `--base-image`, `-b`: Base Docker image to use (overrides Dockerfile FROM)
-- `--private`: Deploy the space as private (default: public)
-
-### Examples
-
-```bash
-# Push to your personal namespace (defaults to username/env-name from openenv.yaml)
-openenv push
-
-# Push to a specific repository
-openenv push --repo-id my-org/my-env
-
-# Push with a custom base image
-openenv push --base-image ghcr.io/meta-pytorch/openenv-base:latest
-
-# Push as a private space
-openenv push --private
-
-# Combine options
-openenv push --repo-id my-org/my-env --base-image custom-base:latest --private
-```
-
-After deployment, your space will be available at:
-`https://huggingface.co/spaces/<repo-id>`
-
-The deployed space includes:
-- **Web Interface** at `/web` - Interactive UI for exploring the environment
-- **API Documentation** at `/docs` - Full OpenAPI/Swagger interface
-- **Health Check** at `/health` - Container health monitoring
-- **WebSocket** at `/ws` - Persistent session endpoint for low-latency interactions
-
-## Environment Details
-
-### Action
-**MisinformationCascadeAction**: Contains a single field
-- `message` (str) - The message to echo back
-
-### Observation
-**MisinformationCascadeObservation**: Contains the echo response and metadata
-- `echoed_message` (str) - The message echoed back
-- `message_length` (int) - Length of the message
-- `reward` (float) - Reward based on message length (length × 0.1)
-- `done` (bool) - Always False for echo environment
-- `metadata` (dict) - Additional info like step count
-
-### Reward
-The reward is calculated as: `message_length × 0.1`
-- "Hi" → reward: 0.2
-- "Hello, World!" → reward: 1.3
-- Empty message → reward: 0.0
-
-## Advanced Usage
-
-### Connecting to an Existing Server
-
-If you already have a Misinformation Cascade Env environment server running, you can connect directly:
-
-```python
-from misinformation_cascade_env import MisinformationCascadeEnv
-
-# Connect to existing server
-misinformation_cascade_envenv = MisinformationCascadeEnv(base_url="<ENV_HTTP_URL_HERE>")
-
-# Use as normal
-result = misinformation_cascade_envenv.reset()
-result = misinformation_cascade_envenv.step(MisinformationCascadeAction(message="Hello!"))
-```
-
-Note: When connecting to an existing server, `misinformation_cascade_envenv.close()` will NOT stop the server.
-
-### Using the Context Manager
-
-The client supports context manager usage for automatic connection management:
-
-```python
-from misinformation_cascade_env import MisinformationCascadeAction, MisinformationCascadeEnv
-
-# Connect with context manager (auto-connects and closes)
-with MisinformationCascadeEnv(base_url="http://localhost:8000") as env:
-    result = env.reset()
-    print(f"Reset: {result.observation.echoed_message}")
-    # Multiple steps with low latency
-    for msg in ["Hello", "World", "!"]:
-        result = env.step(MisinformationCascadeAction(message=msg))
-        print(f"Echoed: {result.observation.echoed_message}")
-```
-
-The client uses WebSocket connections for:
-- **Lower latency**: No HTTP connection overhead per request
-- **Persistent session**: Server maintains your environment state
-- **Efficient for episodes**: Better for many sequential steps
-
-### Concurrent WebSocket Sessions
-
-The server supports multiple concurrent WebSocket connections. To enable this,
-modify `server/app.py` to use factory mode:
-
-```python
-# In server/app.py - use factory mode for concurrent sessions
-app = create_app(
-    MisinformationCascadeEnvironment,  # Pass class, not instance
-    MisinformationCascadeAction,
-    MisinformationCascadeObservation,
-    max_concurrent_envs=4,  # Allow 4 concurrent sessions
-)
-```
-
-Then multiple clients can connect simultaneously:
-
-```python
-from misinformation_cascade_env import MisinformationCascadeAction, MisinformationCascadeEnv
-from concurrent.futures import ThreadPoolExecutor
-
-def run_episode(client_id: int):
-    with MisinformationCascadeEnv(base_url="http://localhost:8000") as env:
-        result = env.reset()
-        for i in range(10):
-            result = env.step(MisinformationCascadeAction(message=f"Client {client_id}, step {i}"))
-        return client_id, result.observation.message_length
-
-# Run 4 episodes concurrently
-with ThreadPoolExecutor(max_workers=4) as executor:
-    results = list(executor.map(run_episode, range(4)))
-```
-
-## Development & Testing
-
-### Direct Environment Testing
-
-Test the environment logic directly without starting the HTTP server:
-
-```bash
-# From the server directory
-python3 server/misinformation_cascade_env_environment.py
-```
-
-This verifies that:
-- Environment resets correctly
-- Step executes actions properly
-- State tracking works
-- Rewards are calculated correctly
-
-### Running Locally
-
-Run the server locally for development:
-
-```bash
-uvicorn server.app:app --reload
-```
-
-## Project Structure
-
-```
-misinformation_cascade_env/
-├── .dockerignore         # Docker build exclusions
-├── __init__.py            # Module exports
-├── README.md              # This file
-├── openenv.yaml           # OpenEnv manifest
-├── pyproject.toml         # Project metadata and dependencies
-├── uv.lock                # Locked dependencies (generated)
-├── client.py              # MisinformationCascadeEnv client
-├── models.py              # Action and Observation models
-└── server/
-    ├── __init__.py        # Server module exports
-    ├── misinformation_cascade_env_environment.py  # Core environment logic
-    ├── app.py             # FastAPI application (HTTP + WebSocket endpoints)
-    └── Dockerfile         # Container image definition
-```
+- Deterministic graph generation and null trajectory from fixed seeds.
+- Internal audit state available from `/state` for replay and debugging.
