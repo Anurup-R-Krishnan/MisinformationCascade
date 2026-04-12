@@ -43,7 +43,8 @@ def test_terminal_reward_is_bounded():
     while not obs.done:
         obs = env.step(CascadeAction(action_type="WAIT"))
 
-    assert 0.0 <= obs.reward <= 1.0
+    assert 0.0 < obs.reward < 1.0
+    assert f"{obs.reward:.3f}" not in {"0.000", "1.000"}
 
 
 def test_non_terminal_reward_has_shaping_signal():
@@ -67,7 +68,8 @@ def test_task_grader_and_registry_contract():
         rewards.append(obs.reward)
 
     score = grade_episode(obs, rewards)
-    assert 0.0 <= score <= 1.0
+    assert 0.0 < score < 1.0
+    assert f"{score:.3f}" not in {"0.000", "1.000"}
 
 
 def test_step_after_done_raises_runtime_error():

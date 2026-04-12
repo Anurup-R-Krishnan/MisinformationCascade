@@ -55,6 +55,8 @@ TASKS: tuple[CascadeTask, ...] = (
 
 TASKS_BY_ID: dict[str, CascadeTask] = {task.task_id: task for task in TASKS}
 TASKS_BY_DIFFICULTY: dict[str, CascadeTask] = {task.difficulty: task for task in TASKS}
+# Phase-2 validator requires strict bounds and inferred scores are compared at 3 decimals.
+SCORE_EPSILON = 1e-3
 
 
 def list_tasks() -> list[CascadeTask]:
@@ -101,7 +103,7 @@ def grade_episode(
     step_rewards: Iterable[float],
 ) -> float:
     """
-    Deterministic 0.0-1.0 grader using outcome and trajectory quality.
+    Deterministic strict-(0,1) grader using outcome and trajectory quality.
 
     The final score blends:
       - terminal containment score (majority weight)
@@ -123,7 +125,7 @@ def grade_episode(
         + 0.10 * _clip01(resource_ratio)
         + 0.05 * _clip01(stability)
     )
-    return round(_clip01(score), 4)
+    return round(_clip_open01(score), 4)
 
 
 def is_task_success(task: CascadeTask, grade_score: float) -> bool:
@@ -132,3 +134,7 @@ def is_task_success(task: CascadeTask, grade_score: float) -> bool:
 
 def _clip01(value: float) -> float:
     return min(max(value, 0.0), 1.0)
+
+
+def _clip_open01(value: float) -> float:
+    return min(max(value, SCORE_EPSILON), 1.0 - SCORE_EPSILON)

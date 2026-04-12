@@ -76,6 +76,7 @@ class MisinformationCascadeEnv:
             obs = env.step(action)
         score = obs.reward
     """
+    SCORE_EPSILON = 1e-3
 
     def __init__(self, difficulty: str = "easy", seed: Optional[int] = None) -> None:
         if difficulty not in TASK_CONFIG:
@@ -556,10 +557,14 @@ class MisinformationCascadeEnv:
         agent_dmg_adjusted = max(0.0, agent_dmg - isolated_damage)
 
         if null_final_adjusted <= 0:
-            return 1.0  # degenerate graph with no reachable infections
+            # Keep terminal score strictly inside (0, 1) for evaluator compatibility.
+            return round(1.0 - self.SCORE_EPSILON, 4)
 
         score = (null_final_adjusted - agent_dmg_adjusted) / null_final_adjusted
-        return round(min(max(score, 0.0), 1.0), 4)
+        return round(
+            min(max(score, self.SCORE_EPSILON), 1.0 - self.SCORE_EPSILON),
+            4,
+        )
 
     def _weighted_damage(self) -> float:
         """Current weighted infection mass: sum of influence scores for

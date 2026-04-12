@@ -70,7 +70,7 @@ Three deterministic tasks are included (easy -> medium -> hard), each with fixed
 | `cascade-medium` | medium | 137 | Balance budget vs wider spread surface | 0.40 |
 | `cascade-hard` | hard | 512 | Contain hub-heavy + external seeding dynamics | 0.20 |
 
-Graders are deterministic and return scores in `[0.0, 1.0]` (`misinformation_cascade_env/task_grader.py`).
+Graders are deterministic and return scores strictly inside `(0, 1)` (`misinformation_cascade_env/task_grader.py`).
 
 ## 4. Inference & Results
 

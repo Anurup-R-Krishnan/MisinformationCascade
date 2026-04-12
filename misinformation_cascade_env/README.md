@@ -35,7 +35,7 @@ This environment ships with three deterministic tasks and programmatic graders:
 
 Task definitions and grader logic live in `task_grader.py`:
 
-- `grade_episode(...)` returns a deterministic normalized score in `[0.0, 1.0]`.
+- `grade_episode(...)` returns a deterministic normalized score strictly in `(0, 1)`.
 - `is_task_success(...)` maps score to pass/fail with task-specific thresholds.
 
 ### Task Quality and Difficulty Progression
@@ -50,7 +50,7 @@ Each task has:
 - fixed seed for reproducibility,
 - deterministic grader logic,
 - explicit success threshold,
-- 0.0-1.0 score output suitable for automated evaluation.
+- strict `(0, 1)` score output suitable for automated evaluation.
 
 ## Environment Objective
 
@@ -88,7 +88,7 @@ Action costs:
 ## Reward and Termination
 
 - Non-terminal reward: shaped step reward from containment progress vs null spread.
-- Terminal reward: counterfactual containment score in `[0.0, 1.0]`.
+- Terminal reward: counterfactual containment score strictly in `(0, 1)`.
 - Episode ends on first of:
   - eradication (`CONFIRMED_INFECTED == 0`)
   - saturation mercy threshold with zero budget

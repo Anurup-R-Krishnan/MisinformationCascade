@@ -3,7 +3,7 @@ from statistics import mean
 
 from misinformation_cascade_env.env import MisinformationCascadeEnv
 from misinformation_cascade_env.evaluate import greedy_containment_policy, wait_policy
-from misinformation_cascade_env.models import TASK_SEEDS
+from misinformation_cascade_env.models import TASK_SEEDS, CascadeObservation
 from misinformation_cascade_env.task_grader import grade_episode
 
 
@@ -63,3 +63,49 @@ def test_difficulty_progression_with_fixed_policy():
     hard = avg_score("hard")
 
     assert easy > medium > hard
+
+
+def test_grader_scores_are_strictly_inside_unit_interval():
+    # Construct a best-case terminal observation that would otherwise score 1.0.
+    max_obs = CascadeObservation(
+        top_nodes=[],
+        confirmed_infected=[],
+        at_risk_nodes=[],
+        budget_remaining=20,
+        step=1,
+        max_steps=15,
+        total_nodes=20,
+        infected_count=0,
+        inoculated_count=0,
+        quarantined_count=0,
+        spread_delta_last_step=0,
+        last_action_effect="terminal",
+        reward=1.0,
+        done=True,
+    )
+
+    # Construct a worst-case terminal observation that would otherwise score 0.0.
+    min_obs = CascadeObservation(
+        top_nodes=[],
+        confirmed_infected=[],
+        at_risk_nodes=[],
+        budget_remaining=0,
+        step=1,
+        max_steps=15,
+        total_nodes=20,
+        infected_count=20,
+        inoculated_count=0,
+        quarantined_count=0,
+        spread_delta_last_step=0,
+        last_action_effect="terminal",
+        reward=0.0,
+        done=True,
+    )
+
+    max_score = grade_episode(max_obs, [0.0])
+    min_score = grade_episode(min_obs, [-1.0])
+
+    assert 0.0 < min_score < 1.0
+    assert 0.0 < max_score < 1.0
+    assert f"{min_score:.3f}" not in {"0.000", "1.000"}
+    assert f"{max_score:.3f}" not in {"0.000", "1.000"}
