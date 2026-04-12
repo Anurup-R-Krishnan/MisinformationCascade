@@ -14,8 +14,8 @@ try:
 except ImportError:
     from models import STARTING_BUDGET, TASK_CONFIG, TASK_SEEDS, CascadeObservation
 
-# Phase-2 validator requires strict (0, 1).  Epsilon must survive 4-dp rounding.
-SCORE_EPSILON: float = 1e-3
+# Phase-2 validator requires strict (0, 1).  Wide margin for safety.
+SCORE_EPSILON: float = 1e-2
 
 
 def clamp_score(value: float) -> float:
