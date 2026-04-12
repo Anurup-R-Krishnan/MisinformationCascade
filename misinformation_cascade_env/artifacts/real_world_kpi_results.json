@@ -1,0 +1,221 @@
+{
+  "episodes": 20,
+  "generated_at_utc": "2026-04-12T06:18:58.096528+00:00",
+  "python_version": "3.14.4",
+  "platform": "Linux-6.19.11-1-cachyos-x86_64-with-glibc2.43",
+  "policies": [
+    "wait",
+    "random",
+    "greedy_containment"
+  ],
+  "difficulties": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "difficulty_weights": {
+    "easy": 0.2,
+    "medium": 0.3,
+    "hard": 0.5
+  },
+  "results": {
+    "wait": {
+      "by_difficulty": {
+        "easy": {
+          "aggregates": {
+            "avg_reward": 0.0,
+            "avg_peak_ratio": 0.9725,
+            "avg_auc_ratio": 0.6428,
+            "avg_spread_ratio": 0.8225,
+            "avg_first_action_ratio": 1.0,
+            "avg_budget_spent_ratio": 0.0
+          },
+          "domain_kpis": {
+            "trust_safety": 0.0811,
+            "election_integrity": 0.069,
+            "public_health": 0.1429,
+            "crisis_response": 0.0096,
+            "network_resilience": 0.2582,
+            "overall_real_world_utility": 0.1122
+          }
+        },
+        "medium": {
+          "aggregates": {
+            "avg_reward": 0.0,
+            "avg_peak_ratio": 1.0,
+            "avg_auc_ratio": 0.7537,
+            "avg_spread_ratio": 0.8571,
+            "avg_first_action_ratio": 1.0,
+            "avg_budget_spent_ratio": 0.0
+          },
+          "domain_kpis": {
+            "trust_safety": 0.0493,
+            "election_integrity": 0.05,
+            "public_health": 0.0985,
+            "crisis_response": 0.0,
+            "network_resilience": 0.25,
+            "overall_real_world_utility": 0.0896
+          }
+        },
+        "hard": {
+          "aggregates": {
+            "avg_reward": 0.0,
+            "avg_peak_ratio": 1.0,
+            "avg_auc_ratio": 0.7951,
+            "avg_spread_ratio": 0.86,
+            "avg_first_action_ratio": 1.0,
+            "avg_budget_spent_ratio": 0.0
+          },
+          "domain_kpis": {
+            "trust_safety": 0.041,
+            "election_integrity": 0.049,
+            "public_health": 0.082,
+            "crisis_response": 0.0,
+            "network_resilience": 0.25,
+            "overall_real_world_utility": 0.0844
+          }
+        }
+      },
+      "domain_kpis": {
+        "trust_safety": 0.0515,
+        "election_integrity": 0.0533,
+        "public_health": 0.0991,
+        "crisis_response": 0.0019,
+        "network_resilience": 0.2517,
+        "overall_real_world_utility": 0.0915
+      }
+    },
+    "random": {
+      "by_difficulty": {
+        "easy": {
+          "aggregates": {
+            "avg_reward": 0.1844,
+            "avg_peak_ratio": 0.8025,
+            "avg_auc_ratio": 0.5461,
+            "avg_spread_ratio": 0.6775,
+            "avg_first_action_ratio": 0.07,
+            "avg_budget_spent_ratio": 0.965
+          },
+          "domain_kpis": {
+            "trust_safety": 0.2429,
+            "election_integrity": 0.236,
+            "public_health": 0.5159,
+            "crisis_response": 0.5245,
+            "network_resilience": 0.151,
+            "overall_real_world_utility": 0.3341
+          }
+        },
+        "medium": {
+          "aggregates": {
+            "avg_reward": 0.1482,
+            "avg_peak_ratio": 0.9071,
+            "avg_auc_ratio": 0.6552,
+            "avg_spread_ratio": 0.7729,
+            "avg_first_action_ratio": 0.05,
+            "avg_budget_spent_ratio": 0.98
+          },
+          "domain_kpis": {
+            "trust_safety": 0.1682,
+            "election_integrity": 0.162,
+            "public_health": 0.4674,
+            "crisis_response": 0.4896,
+            "network_resilience": 0.0996,
+            "overall_real_world_utility": 0.2773
+          }
+        },
+        "hard": {
+          "aggregates": {
+            "avg_reward": 0.125,
+            "avg_peak_ratio": 0.946,
+            "avg_auc_ratio": 0.6248,
+            "avg_spread_ratio": 0.807,
+            "avg_first_action_ratio": 0.044,
+            "avg_budget_spent_ratio": 0.9825
+          },
+          "domain_kpis": {
+            "trust_safety": 0.1502,
+            "election_integrity": 0.1311,
+            "public_health": 0.4744,
+            "crisis_response": 0.4741,
+            "network_resilience": 0.0768,
+            "overall_real_world_utility": 0.2613
+          }
+        }
+      },
+      "domain_kpis": {
+        "trust_safety": 0.1741,
+        "election_integrity": 0.1613,
+        "public_health": 0.4806,
+        "crisis_response": 0.4888,
+        "network_resilience": 0.0985,
+        "overall_real_world_utility": 0.2807
+      }
+    },
+    "greedy_containment": {
+      "by_difficulty": {
+        "easy": {
+          "aggregates": {
+            "avg_reward": 0.7632,
+            "avg_peak_ratio": 0.15,
+            "avg_auc_ratio": 0.075,
+            "avg_spread_ratio": 0.0,
+            "avg_first_action_ratio": 0.0667,
+            "avg_budget_spent_ratio": 0.75
+          },
+          "domain_kpis": {
+            "trust_safety": 0.8259,
+            "election_integrity": 0.8678,
+            "public_health": 0.8789,
+            "crisis_response": 0.8701,
+            "network_resilience": 0.6609,
+            "overall_real_world_utility": 0.8207
+          }
+        },
+        "medium": {
+          "aggregates": {
+            "avg_reward": 0.4468,
+            "avg_peak_ratio": 0.8671,
+            "avg_auc_ratio": 0.6127,
+            "avg_spread_ratio": 0.81,
+            "avg_first_action_ratio": 0.05,
+            "avg_budget_spent_ratio": 1.0
+          },
+          "domain_kpis": {
+            "trust_safety": 0.325,
+            "election_integrity": 0.2784,
+            "public_health": 0.5739,
+            "crisis_response": 0.5634,
+            "network_resilience": 0.2409,
+            "overall_real_world_utility": 0.3963
+          }
+        },
+        "hard": {
+          "aggregates": {
+            "avg_reward": 0.1853,
+            "avg_peak_ratio": 0.906,
+            "avg_auc_ratio": 0.4539,
+            "avg_spread_ratio": 0.826,
+            "avg_first_action_ratio": 0.04,
+            "avg_budget_spent_ratio": 1.0
+          },
+          "domain_kpis": {
+            "trust_safety": 0.2255,
+            "election_integrity": 0.1585,
+            "public_health": 0.562,
+            "crisis_response": 0.502,
+            "network_resilience": 0.1116,
+            "overall_real_world_utility": 0.3119
+          }
+        }
+      },
+      "domain_kpis": {
+        "trust_safety": 0.3754,
+        "election_integrity": 0.3363,
+        "public_health": 0.629,
+        "crisis_response": 0.594,
+        "network_resilience": 0.2603,
+        "overall_real_world_utility": 0.439
+      }
+    }
+  }
+}
