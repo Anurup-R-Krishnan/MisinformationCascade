@@ -36,11 +36,15 @@ except Exception as e:  # pragma: no cover
     ) from e
 
 try:
+    # Preferred path when the package is installed (editable or wheel install).
+    from misinformation_cascade_env.models import CascadeAction, CascadeObservation
+    from misinformation_cascade_env.server.misinformation_cascade_env_environment import (
+        MisinformationCascadeEnvironment,
+    )
+except ImportError:
+    # Fallback for local source execution from the repository root.
     from ..models import CascadeAction, CascadeObservation
     from .misinformation_cascade_env_environment import MisinformationCascadeEnvironment
-except ImportError:
-    from models import CascadeAction, CascadeObservation
-    from server.misinformation_cascade_env_environment import MisinformationCascadeEnvironment
 
 
 # Create the app with web interface and README integration

@@ -15,11 +15,16 @@ from typing import Any, Optional
 from openenv.core.env_server.interfaces import Environment
 
 try:
-    from ..env import MisinformationCascadeEnv as CascadeSimulator
-    from ..models import CascadeAction, CascadeObservation, CascadeState
+    from misinformation_cascade_env.env import MisinformationCascadeEnv as CascadeSimulator
+    from misinformation_cascade_env.models import (
+        TASK_CONFIG,
+        CascadeAction,
+        CascadeObservation,
+        CascadeState,
+    )
 except ImportError:
-    from env import MisinformationCascadeEnv as CascadeSimulator
-    from models import CascadeAction, CascadeObservation, CascadeState
+    from ..env import MisinformationCascadeEnv as CascadeSimulator
+    from ..models import TASK_CONFIG, CascadeAction, CascadeObservation, CascadeState
 
 
 class MisinformationCascadeEnvironment(
@@ -43,8 +48,17 @@ class MisinformationCascadeEnvironment(
         episode_id: Optional[str] = None,
         **kwargs: Any,
     ) -> CascadeObservation:
-        if "difficulty" in kwargs and kwargs["difficulty"] != self._difficulty:
-            self._difficulty = kwargs["difficulty"]
+        if "difficulty" in kwargs:
+            requested_difficulty = kwargs["difficulty"]
+            if requested_difficulty not in TASK_CONFIG:
+                raise ValueError(
+                    f"difficulty must be one of {sorted(TASK_CONFIG.keys())}, got '{requested_difficulty}'"
+                )
+        else:
+            requested_difficulty = self._difficulty
+
+        if requested_difficulty != self._difficulty:
+            self._difficulty = requested_difficulty
             self._sim = CascadeSimulator(difficulty=self._difficulty, seed=seed)
 
         # episode_id is accepted for OpenEnv contract parity; simulator generates ids.

@@ -8,8 +8,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import platform
 import random
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
@@ -135,7 +138,15 @@ def benchmark(
     policies: list[str],
     difficulties: list[str],
 ) -> dict:
-    out: dict = {"episodes": episodes, "results": {}}
+    out: dict = {
+        "episodes": episodes,
+        "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "policies": policies,
+        "difficulties": difficulties,
+        "results": {},
+    }
 
     for policy in policies:
         out["results"][policy] = {}
