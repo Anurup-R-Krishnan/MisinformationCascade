@@ -1,16 +1,3 @@
----
-title: Misinformation Cascade Env
-emoji: 🛡️
-colorFrom: red
-colorTo: blue
-sdk: docker
-pinned: false
-app_port: 8000
-base_path: /web
-tags:
-  - openenv
----
-
 # Misinformation Cascade Env
 
 A real-world OpenEnv benchmark for RL agents and LLMs performing **misinformation containment** under budget, uncertainty, and graph-driven spread dynamics.
@@ -162,7 +149,6 @@ openenvHackathon/
     ├── env.py
     ├── models.py
     ├── task_grader.py
-    ├── offline_advisor.py
     ├── tests/
     └── artifacts/
 ```
