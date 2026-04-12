@@ -33,8 +33,11 @@ class EpisodeTrace:
     first_action_step: int
 
 
+_SCORE_EPS = 1e-3
+
+
 def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, value))
+    return max(_SCORE_EPS, min(1.0 - _SCORE_EPS, value))
 
 
 def run_episode_trace(difficulty: str, seed: int, policy_name: str) -> EpisodeTrace:
