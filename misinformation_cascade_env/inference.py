@@ -23,12 +23,12 @@ try:
     from .env import MisinformationCascadeEnv as CascadeSimulator
     from .models import CascadeAction, CascadeObservation
     from .prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
-    from .task_grader import grade_episode, is_task_success, resolve_tasks
+    from .task_grader import grade_episode, is_task_success, resolve_tasks, SCORE_EPSILON
 except ImportError:
     from env import MisinformationCascadeEnv as CascadeSimulator
     from models import CascadeAction, CascadeObservation
     from prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
-    from task_grader import grade_episode, is_task_success, resolve_tasks
+    from task_grader import grade_episode, is_task_success, resolve_tasks, SCORE_EPSILON
 
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -155,7 +155,7 @@ def run_task(task, client: Any) -> float:
     observation = env.reset(seed=task.seed)
     rewards: list[float] = []
     steps = 0
-    grade_score = 0.0
+    grade_score = SCORE_EPSILON
     success = False
 
     log_start(task=task.task_id, env=BENCHMARK, model=MODEL_NAME)
