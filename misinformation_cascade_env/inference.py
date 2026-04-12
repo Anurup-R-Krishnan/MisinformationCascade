@@ -2,10 +2,10 @@
 Baseline inference script for OpenEnv hackathon evaluation.
 
 Requirements covered:
-- Uses OpenAI client for model calls (`API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`)
-- Emits strict structured logs:
-  [START] / [STEP] / [END]
+- Uses OpenAI client for model calls (API_BASE_URL, MODEL_NAME, HF_TOKEN)
+- Emits strict structured logs: [START] / [STEP] / [END]
 - Runs all three benchmark tasks (easy/medium/hard) by default
+- All task scores are strictly within (0, 1) — never 0.0 or 1.0.
 """
 
 from __future__ import annotations
@@ -23,13 +23,16 @@ try:
     from .env import MisinformationCascadeEnv as CascadeSimulator
     from .models import CascadeAction, CascadeObservation
     from .prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
-    from .task_grader import grade_episode, is_task_success, resolve_tasks, SCORE_EPSILON
+    from .task_grader import grade_episode, is_task_success, resolve_tasks, clamp_score
 except ImportError:
     from env import MisinformationCascadeEnv as CascadeSimulator
     from models import CascadeAction, CascadeObservation
     from prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
-    from task_grader import grade_episode, is_task_success, resolve_tasks, SCORE_EPSILON
+    from task_grader import grade_episode, is_task_success, resolve_tasks, clamp_score
 
+# ---------------------------------------------------------------------------
+# Configuration from environment variables
+# ---------------------------------------------------------------------------
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
@@ -42,26 +45,59 @@ MAX_TOKENS = int(os.getenv("MAX_TOKENS", "180"))
 API_TIMEOUT_S = float(os.getenv("API_TIMEOUT_S", "20"))
 API_MAX_RETRIES = int(os.getenv("API_MAX_RETRIES", "1"))
 
+# WAIT action used for fallback / forced termination — avoids repeated construction.
+_WAIT_ACTION = CascadeAction(action_type="WAIT", reasoning="Fallback.")
 
-def log_start(task: str, env: str, model: str) -> None:
-    print(f"[START] task={task} env={env} model={model}", flush=True)
+
+# ---------------------------------------------------------------------------
+# Structured logging helpers (validator-required format)
+# ---------------------------------------------------------------------------
+
+def _sanitize(value: Optional[str]) -> str:
+    """Collapse whitespace for safe single-line log output."""
+    if value is None:
+        return "null"
+    return " ".join(str(value).split())
 
 
-def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
-    error_val = sanitize_log_value(error) if error else "null"
-    done_val = str(done).lower()
+def _log_start(task_id: str) -> None:
+    print(f"[START] task={task_id} env={BENCHMARK} model={MODEL_NAME}", flush=True)
+
+
+def _log_step(
+    step: int,
+    action: CascadeAction,
+    reward: float,
+    done: bool,
+    error: Optional[str],
+) -> None:
+    action_str = (
+        "wait()"
+        if action.action_type == "WAIT"
+        else f"{action.action_type.lower()}('{action.target_node_id}')"
+    )
+    error_str = _sanitize(error) if error else "null"
     print(
-        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        f"[STEP] step={step} action={action_str} "
+        f"reward={reward:.2f} done={str(done).lower()} error={error_str}",
         flush=True,
     )
 
 
-def log_end(success: bool, steps: int, rewards: list[float]) -> None:
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
+def _log_end(success: bool, steps: int, rewards: list[float]) -> None:
+    rewards_csv = ",".join(f"{r:.2f}" for r in rewards)
+    print(
+        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_csv}",
+        flush=True,
+    )
 
+
+# ---------------------------------------------------------------------------
+# OpenAI client builder
+# ---------------------------------------------------------------------------
 
 def build_openai_client() -> Any:
+    """Build and return an OpenAI-compatible client for HF Inference."""
     if not HF_TOKEN:
         raise RuntimeError("HF_TOKEN must be set for baseline inference.")
     if OpenAI is None:
@@ -76,13 +112,20 @@ def build_openai_client() -> Any:
     )
 
 
-def pick_action(
-    client: Any,
-    observation: CascadeObservation,
-) -> CascadeAction:
-    fallback = CascadeAction(action_type="WAIT", reasoning="Fallback action on model error.")
+# ---------------------------------------------------------------------------
+# Action selection
+# ---------------------------------------------------------------------------
 
-    user_prompt = build_user_prompt(observation)
+def _visible_node_ids(obs: CascadeObservation) -> set[str]:
+    """Return all node IDs currently visible to the agent."""
+    return {
+        n.node_id
+        for n in (*obs.top_nodes, *obs.confirmed_infected, *obs.at_risk_nodes)
+    }
+
+
+def pick_action(client: Any, observation: CascadeObservation) -> CascadeAction:
+    """Query the LLM for a single action, with graceful fallback to WAIT."""
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
@@ -91,7 +134,7 @@ def pick_action(
             timeout=API_TIMEOUT_S,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": build_user_prompt(observation)},
             ],
         )
         content = response.choices[0].message.content or ""
@@ -101,117 +144,122 @@ def pick_action(
             target_node_id=target_node_id,
             reasoning=reasoning,
         )
-        return sanitize_action(observation, action, fallback)
+
+        # Validate that the target node is actually visible to the agent.
+        if action.action_type != "WAIT" and action.target_node_id not in _visible_node_ids(observation):
+            return CascadeAction(
+                action_type="WAIT",
+                reasoning=f"Target '{action.target_node_id}' not visible; fallback WAIT.",
+            )
+        return action
+
     except Exception as exc:
-        fallback.reasoning = f"Model call fallback: {exc.__class__.__name__}"
-        return fallback
-
-
-def sanitize_action(
-    observation: CascadeObservation,
-    action: CascadeAction,
-    fallback: CascadeAction,
-) -> CascadeAction:
-    if action.action_type == "WAIT":
-        return action
-
-    known_ids = {
-        n.node_id
-        for n in (
-            observation.top_nodes
-            + observation.confirmed_infected
-            + observation.at_risk_nodes
+        return CascadeAction(
+            action_type="WAIT",
+            reasoning=f"Model call fallback: {exc.__class__.__name__}",
         )
-    }
-    if action.target_node_id in known_ids:
-        return action
-    return fallback
 
 
-def action_to_log(action: CascadeAction) -> str:
-    if action.action_type == "WAIT":
-        return "wait()"
-    return f"{action.action_type.lower()}('{action.target_node_id}')"
+# ---------------------------------------------------------------------------
+# Error extraction from env feedback
+# ---------------------------------------------------------------------------
 
-
-def extract_last_action_error(last_action_effect: str) -> Optional[str]:
-    if "INVALID ACTION" not in last_action_effect:
+def _extract_action_error(effect: str) -> Optional[str]:
+    """Pull the human-readable error from an env last_action_effect string, if any."""
+    if "INVALID ACTION" not in effect:
         return None
-    if "—" in last_action_effect:
-        detail = last_action_effect.split("—", 1)[1]
-    else:
-        detail = last_action_effect
-    return detail.split("Step consumed", 1)[0].strip()
+    # Split on em-dash or fall back to full text.
+    detail = effect.split("—", 1)[-1]
+    return detail.split("Step consumed", 1)[0].strip() or None
 
 
-def sanitize_log_value(value: Optional[str]) -> str:
-    if value is None:
-        return "null"
-    return " ".join(str(value).split())
+# ---------------------------------------------------------------------------
+# Core episode runner
+# ---------------------------------------------------------------------------
+
+def _execute_step(
+    env: CascadeSimulator,
+    action: CascadeAction,
+) -> tuple[CascadeObservation, float]:
+    """Execute a single step and return (observation, reward)."""
+    obs = env.step(action)
+    reward = float(obs.reward or 0.0)
+    return obs, reward
 
 
 def run_task(task, client: Any) -> float:
+    """Run a complete task episode and return a grade score in strict (0, 1).
+
+    The function guarantees the returned score is NEVER exactly 0.0 or 1.0,
+    even if an exception aborts the episode early.
+    """
     env = CascadeSimulator(difficulty=task.difficulty, seed=task.seed)
     observation = env.reset(seed=task.seed)
     rewards: list[float] = []
     steps = 0
-    grade_score = SCORE_EPSILON
     success = False
 
-    log_start(task=task.task_id, env=BENCHMARK, model=MODEL_NAME)
+    _log_start(task.task_id)
+
     try:
+        # Phase 1: Agent-driven steps (LLM picks actions)
         while not observation.done and steps < task.max_steps:
             action = pick_action(client, observation)
-            observation = env.step(action)
+            observation, reward = _execute_step(env, action)
             steps += 1
-            reward = float(observation.reward or 0.0)
             rewards.append(reward)
-            log_step(
+            _log_step(
                 step=steps,
-                action=action_to_log(action),
+                action=action,
                 reward=reward,
-                done=bool(observation.done),
-                error=extract_last_action_error(observation.last_action_effect),
+                done=observation.done,
+                error=_extract_action_error(observation.last_action_effect),
             )
 
-        if not observation.done:
-            while not observation.done:
-                action = CascadeAction(action_type="WAIT", reasoning="Force terminal state.")
-                observation = env.step(action)
-                steps += 1
-                reward = float(observation.reward or 0.0)
-                rewards.append(reward)
-                log_step(
-                    step=steps,
-                    action=action_to_log(action),
-                    reward=reward,
-                    done=bool(observation.done),
-                    error=extract_last_action_error(observation.last_action_effect),
-                )
+        # Phase 2: Force termination if episode didn't end naturally
+        while not observation.done:
+            wait = CascadeAction(action_type="WAIT", reasoning="Forcing terminal state.")
+            observation, reward = _execute_step(env, wait)
+            steps += 1
+            rewards.append(reward)
+            _log_step(
+                step=steps,
+                action=wait,
+                reward=reward,
+                done=observation.done,
+                error=_extract_action_error(observation.last_action_effect),
+            )
 
+        # Compute grade — grade_episode already returns strict (0, 1).
         grade_score = grade_episode(observation, rewards)
         success = is_task_success(task, grade_score)
+
     except Exception as exc:
         print(
             f"[stderr] task={task.task_id} error={exc.__class__.__name__}:{exc}",
             file=sys.stderr,
             flush=True,
         )
+        # Guarantee a valid score even on failure.
+        grade_score = clamp_score(0.0)
+
     finally:
-        log_end(success=success, steps=steps, rewards=rewards)
+        _log_end(success=success, steps=steps, rewards=rewards)
 
     return grade_score
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 def main() -> None:
+    """Run all selected tasks and report aggregate score."""
     tasks = resolve_tasks(TASK_SELECTOR)
     client = build_openai_client()
 
-    scores: list[float] = []
-    for task in tasks:
-        scores.append(run_task(task, client))
+    scores = [run_task(task, client) for task in tasks]
 
-    # Keep final output machine-friendly while still exposing aggregate.
     avg = sum(scores) / max(1, len(scores))
     print(f"[stderr] aggregate_avg_score={avg:.4f}", file=sys.stderr, flush=True)
 
