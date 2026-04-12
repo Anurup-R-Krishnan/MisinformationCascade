@@ -1,21 +1,7 @@
-"""
-env.py — Misinformation Cascade Containment Environment
+"""Misinformation Cascade Containment — OpenEnv environment.
 
-Implements the OpenEnv interface:
-    reset()  → CascadeObservation
-    step()   → CascadeObservation
-    state()  → dict  (full internal state for orchestrator/judges)
-
-Physics engine responsibilities (all live here):
-    - Validate actions before applying them.
-    - Apply action effects to graph nodes.
-    - Advance LATENT timers (turns_at_risk increment).
-    - Run probabilistic spread after every action (confirmed + latent nodes spread).
-    - Decrement BOOST timers and restore spread probs.
-    - Inject external seeds on hard difficulty every ext_interval steps.
-    - Detect termination: eradication, saturation mercy kill, max_steps.
-    - Compute terminal counterfactual score.
-    - Build CascadeObservation from internal graph state.
+API: reset() → Observation, step(action) → Observation, state() → dict.
+Physics: validate → apply → spread → boost decay → external seed → terminate.
 """
 
 from __future__ import annotations
@@ -62,9 +48,7 @@ except ImportError:
     from task_grader import clamp_score
 
 
-# ---------------------------------------------------------------------------
-# Environment
-# ---------------------------------------------------------------------------
+# ── Environment ───────────────────────────────────────────────────────────
 
 class MisinformationCascadeEnv:
     """
@@ -82,65 +66,55 @@ class MisinformationCascadeEnv:
         if difficulty not in TASK_CONFIG:
             raise ValueError(f"difficulty must be one of {list(TASK_CONFIG)}")
         self.difficulty = difficulty
-        self._cfg       = TASK_CONFIG[difficulty]
-        self._seed      = seed if seed is not None else TASK_SEEDS[difficulty]
+        self._cfg = TASK_CONFIG[difficulty]
+        self._seed = seed if seed is not None else TASK_SEEDS[difficulty]
 
         # Populated by reset()
-        self._G:               Optional[nx.Graph]    = None
-        self._nodes:           Optional[dict[str, GraphNode]] = None
+        self._G: Optional[nx.Graph] = None
+        self._nodes: Optional[dict[str, GraphNode]] = None
         self._null_trajectory: Optional[list[float]] = None
-        self._step_count:      int   = 0
-        self._budget:          int   = STARTING_BUDGET
-        self._episode_id:      str   = ""
-        self._spread_rng:      Optional[random.Random] = None
-        self._done:            bool  = False
+        self._step_count: int = 0
+        self._budget: int = STARTING_BUDGET
+        self._episode_id: str = ""
+        self._spread_rng: Optional[random.Random] = None
+        self._done: bool = False
         self._termination_reason: Optional[str] = None
-        self._prev_damage:     float = 0.0
-        self._prev_infected_count: int = 0  # Track delta for spread_delta_last_step
-        self._isolated_subgraph_node_ids: set[str] = set()  # Nodes in unreachable infected islands
+        self._prev_damage: float = 0.0
+        self._prev_infected_count: int = 0
+        self._isolated_subgraph_node_ids: set[str] = set()
 
-    # -----------------------------------------------------------------------
-    # OpenEnv API
-    # -----------------------------------------------------------------------
+    # ── OpenEnv API ────────────────────────────────────────────────────
 
     def reset(self, seed: Optional[int] = None) -> CascadeObservation:
-        """Initialise a fresh episode. Returns the first observation."""
+        """Initialise a fresh episode and return the first observation."""
         if seed is not None:
             self._seed = seed
-        G, node_list, null_trajectory = build_graph(self.difficulty, seed=self._seed)
 
-        self._G               = G
-        self._nodes           = {n.node_id: n for n in node_list}
-        self._null_trajectory = null_trajectory
-        self._step_count      = 0
-        self._budget          = STARTING_BUDGET
-        self._episode_id      = str(uuid.uuid4())
-        self._done            = False
+        G, node_list, null_traj = build_graph(self.difficulty, seed=self._seed)
+
+        self._G = G
+        self._nodes = {n.node_id: n for n in node_list}
+        self._null_trajectory = null_traj
+        self._step_count = 0
+        self._budget = STARTING_BUDGET
+        self._episode_id = str(uuid.uuid4())
+        self._done = False
         self._termination_reason = None
-        self._spread_rng      = random.Random(self._seed + 999)  # FIXED: Match inference.py null simulator seed
+        self._spread_rng = random.Random(self._seed + 999)
 
-        expected_trajectory_len = self._cfg["max_steps"] + 1
-        if len(self._null_trajectory) != expected_trajectory_len:
-            raise ValueError(
-                "Null trajectory is inconsistent with max_steps: "
-                f"{len(self._null_trajectory)} != {expected_trajectory_len}"
-            )
-        if self._cfg["n_initial_infected"] > 0 and self._null_trajectory[0] <= 0.0:
-            raise ValueError(
-                "Null trajectory initial damage must be positive when seeded infections exist."
-            )
+        expected = self._cfg["max_steps"] + 1
+        if len(null_traj) != expected:
+            raise ValueError(f"null_trajectory length {len(null_traj)} != {expected}")
+        if self._cfg["n_initial_infected"] > 0 and null_traj[0] <= 0.0:
+            raise ValueError("Null trajectory initial damage must be > 0 when infections exist.")
 
-        # Sync GraphNode data pointers into the NetworkX graph
-        for node_id, gn in self._nodes.items():
-            self._G.nodes[node_id]["data"] = gn
+        for nid, gn in self._nodes.items():
+            self._G.nodes[nid]["data"] = gn
 
-        # Compute initial AT_RISK flags before first observation
         self._update_at_risk_flags()
-
         self._prev_damage = self._weighted_damage()
         self._prev_infected_count = sum(
-            1 for gn in self._nodes.values()
-            if gn.status == "CONFIRMED_INFECTED"
+            1 for gn in self._nodes.values() if gn.status == "CONFIRMED_INFECTED"
         )
 
         return self._build_observation(
@@ -148,69 +122,50 @@ class MisinformationCascadeEnv:
         )
 
     def step(self, action: CascadeAction) -> CascadeObservation:
-        """Apply one agent action, advance physics, return next observation."""
+        """Apply one action, advance physics, return next observation."""
         if self._done:
             raise RuntimeError("Episode is done. Call reset() before stepping.")
 
         self._step_count += 1
-
-        # --- Validate action ---
-        valid, error_msg = self._validate_action(action)
+        valid, err = self._validate_action(action)
 
         if not valid:
-            # World advances, action is wasted, budget unchanged
             self._advance_physics()
-            effect = (
-                f"INVALID ACTION — {error_msg} "
-                f"Step consumed. Infection spread unchecked."
+            return self._finalize_step(
+                f"INVALID ACTION \u2014 {err} Step consumed. Infection spread unchecked."
             )
-            return self._finalize_step(effect)
 
-        # --- Apply valid action ---
         effect = self._apply_action(action)
         self._budget -= ACTION_COSTS[action.action_type]
-
-        # --- Advance physics ---
         self._advance_physics()
-
         return self._finalize_step(effect)
 
     def state(self) -> dict:
-        """Return full internal state for orchestrator replay and judge auditing."""
+        """Full internal state for orchestrator replay / judge auditing."""
         if self._G is None:
             return {"error": "Environment not initialised. Call reset() first."}
 
-        nodes_by_status: dict[str, list[str]] = {
-            "susceptible":        [],
-            "latent":             [],
-            "confirmed_infected": [],
-            "inoculated":         [],
-            "quarantined":        [],
+        by_status: dict[str, list[str]] = {
+            s: [] for s in ("susceptible", "latent", "confirmed_infected",
+                           "inoculated", "quarantined")
         }
         for nid, gn in self._nodes.items():
-            key = gn.status.lower()
-            nodes_by_status[key].append(nid)
+            by_status[gn.status.lower()].append(nid)
 
         return CascadeState(
-            episode_id   = self._episode_id,
-            difficulty   = self.difficulty,
-            step_count   = self._step_count,
-            budget       = self._budget,
-            max_steps    = self._cfg["max_steps"],
-            susceptible        = nodes_by_status["susceptible"],
-            latent             = nodes_by_status["latent"],
-            confirmed_infected = nodes_by_status["confirmed_infected"],
-            inoculated         = nodes_by_status["inoculated"],
-            quarantined        = nodes_by_status["quarantined"],
-            total_damage_accumulated = self._prev_damage,
-            null_trajectory          = self._null_trajectory,
-            graph_node_link_data     = nx.node_link_data(self._G),
-            termination_reason       = self._termination_reason,
+            episode_id=self._episode_id,
+            difficulty=self.difficulty,
+            step_count=self._step_count,
+            budget=self._budget,
+            max_steps=self._cfg["max_steps"],
+            **by_status,
+            total_damage_accumulated=self._prev_damage,
+            null_trajectory=self._null_trajectory,
+            graph_node_link_data=nx.node_link_data(self._G),
+            termination_reason=self._termination_reason,
         ).model_dump()
 
-    # -----------------------------------------------------------------------
-    # Action validation
-    # -----------------------------------------------------------------------
+    # ── Action Validation ──────────────────────────────────────────────
 
     def _validate_action(self, action: CascadeAction) -> tuple[bool, str]:
         if action.action_type == "WAIT":
@@ -254,9 +209,7 @@ class MisinformationCascadeEnv:
 
         return True, ""
 
-    # -----------------------------------------------------------------------
-    # Action application
-    # -----------------------------------------------------------------------
+    # ── Action Application ─────────────────────────────────────────────
 
     def _apply_action(self, action: CascadeAction) -> str:
         """Apply a validated action. Returns shaped feedback string."""
@@ -346,9 +299,7 @@ class MisinformationCascadeEnv:
             f"{gn.effective_spread_prob:.2f} for {BOOST_DURATION} turns."
         )
 
-    # -----------------------------------------------------------------------
-    # Physics engine
-    # -----------------------------------------------------------------------
+    # ── Physics Engine ─────────────────────────────────────────────────
 
     def _advance_physics(self) -> None:
         """Run one step of spread physics after the action has been applied."""
@@ -453,9 +404,7 @@ class MisinformationCascadeEnv:
                 gn.at_risk = False
                 # Do not clear infected_neighbor — preserves first-exposure record
 
-    # -----------------------------------------------------------------------
-    # Termination and scoring
-    # -----------------------------------------------------------------------
+    # ── Termination & Scoring ──────────────────────────────────────────
 
     def _detect_isolated_infected_subgraphs(self) -> list[set[str]]:
         """Detect connected components containing CONFIRMED_INFECTED nodes that are
@@ -572,9 +521,7 @@ class MisinformationCascadeEnv:
             if gn.status in ("LATENT", "CONFIRMED_INFECTED")
         )
 
-    # -----------------------------------------------------------------------
-    # Observation builder
-    # -----------------------------------------------------------------------
+    # ── Observation Builder ────────────────────────────────────────────
 
     def _finalize_step(self, base_effect: str) -> CascadeObservation:
         """Check termination, compute reward, build and return observation."""

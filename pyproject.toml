@@ -26,3 +26,8 @@ server = "misinformation_cascade_env.server.app:main"
 include-package-data = true
 packages = ["misinformation_cascade_env", "misinformation_cascade_env.server"]
 package-dir = { "misinformation_cascade_env" = "misinformation_cascade_env", "misinformation_cascade_env.server" = "misinformation_cascade_env/server" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
