@@ -1,0 +1,21 @@
+
+========================================
+  OpenEnv Submission Validator
+========================================
+[08:55:34] Repo:     /home/anuruprkris/Project/openenvHackathon
+[08:55:34] Ping URL: https://itsmeamario-misinformation-cascade-openenv.hf.space
+
+[08:55:34] Step 1/3: Pinging HF Space (https://itsmeamario-misinformation-cascade-openenv.hf.space/reset) ...
+[08:55:35] PASSED -- HF Space is live and responds to /reset
+[08:55:35] Step 2/3: Running docker build ...
+[08:55:35]   Found Dockerfile in /home/anuruprkris/Project/openenvHackathon
+[08:55:54] PASSED -- Docker build succeeded
+[08:55:54] Step 3/3: Running openenv validate ...
+[08:55:54] PASSED -- openenv validate passed
+[08:55:54]   [OK] openenvHackathon: Ready for multi-mode deployment
+
+========================================
+  All 3/3 checks passed!
+  Your submission is ready to submit.
+========================================
+
