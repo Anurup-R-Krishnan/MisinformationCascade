@@ -89,3 +89,22 @@ def test_insufficient_budget_action_is_rejected_without_spend():
     obs = env.step(CascadeAction(action_type="INOCULATE", target_node_id=target_id))
     assert "Insufficient budget" in obs.last_action_effect
     assert obs.budget_remaining == 0
+
+
+def test_episode_is_deterministic_for_fixed_seed_wait_policy():
+    def run_episode() -> tuple[list[float], float, int, int]:
+        env = MisinformationCascadeEnv(difficulty="medium", seed=137)
+        obs = env.reset(seed=137)
+        rewards = [obs.reward]
+        while not obs.done:
+            obs = env.step(CascadeAction(action_type="WAIT"))
+            rewards.append(obs.reward)
+        return rewards, obs.reward, obs.infected_count, obs.budget_remaining
+
+    rewards_a, terminal_a, infected_a, budget_a = run_episode()
+    rewards_b, terminal_b, infected_b, budget_b = run_episode()
+
+    assert rewards_a == rewards_b
+    assert terminal_a == terminal_b
+    assert infected_a == infected_b
+    assert budget_a == budget_b
