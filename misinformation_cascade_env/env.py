@@ -118,6 +118,17 @@ class MisinformationCascadeEnv:
         self._termination_reason = None
         self._spread_rng      = random.Random(self._seed + 999)  # FIXED: Match inference.py null simulator seed
 
+        expected_trajectory_len = self._cfg["max_steps"] + 1
+        if len(self._null_trajectory) != expected_trajectory_len:
+            raise ValueError(
+                "Null trajectory is inconsistent with max_steps: "
+                f"{len(self._null_trajectory)} != {expected_trajectory_len}"
+            )
+        if self._cfg["n_initial_infected"] > 0 and self._null_trajectory[0] <= 0.0:
+            raise ValueError(
+                "Null trajectory initial damage must be positive when seeded infections exist."
+            )
+
         # Sync GraphNode data pointers into the NetworkX graph
         for node_id, gn in self._nodes.items():
             self._G.nodes[node_id]["data"] = gn
