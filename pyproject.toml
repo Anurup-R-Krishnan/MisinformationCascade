@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-misinformation_cascade_env"
+version = "0.1.0"
+description = "Misinformation Cascade Env environment for OpenEnv"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]>=0.2.2",
+    "networkx>=3.3",
+    "openai>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+server = "misinformation_cascade_env.server.app:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["misinformation_cascade_env", "misinformation_cascade_env.server"]
+package-dir = { "misinformation_cascade_env" = "misinformation_cascade_env", "misinformation_cascade_env.server" = "misinformation_cascade_env/server" }
