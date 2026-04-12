@@ -17,18 +17,6 @@ A real-world OpenEnv benchmark for RL agents and LLMs performing **misinformatio
 
 Built for the **Meta × Hugging Face × PyTorch OpenEnv Hackathon 2026**.
 
-## Table of Contents
-
-1. Environment Description & Motivation
-2. Observation & Action Space
-3. Task Descriptions & Difficulty
-4. Inference & Results
-5. Visual Workflow
-6. Setup & Usage Instructions
-7. System Architecture
-8. Project Structure
-9. Pre-Validation Results
-10. Team
 
 ## 1. Environment Description & Motivation
 
@@ -90,12 +78,7 @@ The required root inference script is:
 
 - `inference.py`
 
-Latest baseline run (offline advisor fallback, no API key configured):
-
-- `cascade-easy`: success=true, steps=3
-- `cascade-medium`: success=true, steps=8
-- `cascade-hard`: success=true, steps=9
-- aggregate average score: `0.5847`
+Baseline inference is token-driven via `HF_TOKEN` and uses OpenAI client calls for every model step.
 
 Structured log format emitted:
 

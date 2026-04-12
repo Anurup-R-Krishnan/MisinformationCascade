@@ -16,31 +16,25 @@ from typing import Any, Optional
 
 try:
     from openai import OpenAI
-except ImportError:  # pragma: no cover - handled at runtime for offline mode
+except ImportError:  # pragma: no cover - handled at runtime
     OpenAI = None  # type: ignore[assignment]
 
 try:
     from .env import MisinformationCascadeEnv as CascadeSimulator
     from .models import CascadeAction, CascadeObservation
-    from .offline_advisor import choose_action as choose_offline_action
     from .prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
     from .task_grader import grade_episode, is_task_success, resolve_tasks
 except ImportError:
     from env import MisinformationCascadeEnv as CascadeSimulator
     from models import CascadeAction, CascadeObservation
-    from offline_advisor import choose_action as choose_offline_action
     from prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
     from task_grader import grade_episode, is_task_success, resolve_tasks
 
 
-API_KEY = (
-    os.getenv("HF_TOKEN")
-    or os.getenv("API_KEY")
-    or os.getenv("OPENAI_API_KEY")
-    or os.getenv("GROQ_API_KEY")
-)
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+HF_TOKEN = os.getenv("HF_TOKEN")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 BENCHMARK = os.getenv("MY_ENV_V4_BENCHMARK") or "misinformation_cascade_env"
 TASK_SELECTOR = os.getenv("CASCADE_TASKS") or "easy,medium,hard"
 TEMPERATURE = float(os.getenv("TEMPERATURE", "0.0"))
@@ -67,28 +61,26 @@ def log_end(success: bool, steps: int, rewards: list[float]) -> None:
     print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
 
 
-def build_openai_client() -> Optional[Any]:
-    if not API_KEY:
-        return None
+def build_openai_client() -> Any:
+    if not HF_TOKEN:
+        raise RuntimeError("HF_TOKEN must be set for baseline inference.")
     if OpenAI is None:
         raise RuntimeError(
-            "HF_TOKEN/API_KEY is set but `openai` package is missing. Install with `uv sync`."
+            "HF_TOKEN is set but `openai` package is missing. Install with `uv sync`."
         )
     return OpenAI(
         base_url=API_BASE_URL,
-        api_key=API_KEY,
+        api_key=HF_TOKEN,
         timeout=API_TIMEOUT_S,
         max_retries=API_MAX_RETRIES,
     )
 
 
 def pick_action(
-    client: Optional[Any],
+    client: Any,
     observation: CascadeObservation,
 ) -> CascadeAction:
-    fallback = choose_offline_action(observation)
-    if client is None:
-        return fallback
+    fallback = CascadeAction(action_type="WAIT", reasoning="Fallback action on model error.")
 
     user_prompt = build_user_prompt(observation)
     try:
@@ -111,7 +103,7 @@ def pick_action(
         )
         return sanitize_action(observation, action, fallback)
     except Exception as exc:
-        fallback.reasoning = f"LLM fallback: {exc.__class__.__name__}"
+        fallback.reasoning = f"Model call fallback: {exc.__class__.__name__}"
         return fallback
 
 
@@ -158,7 +150,7 @@ def sanitize_log_value(value: Optional[str]) -> str:
     return " ".join(str(value).split())
 
 
-def run_task(task, client: Optional[Any]) -> float:
+def run_task(task, client: Any) -> float:
     env = CascadeSimulator(difficulty=task.difficulty, seed=task.seed)
     observation = env.reset(seed=task.seed)
     rewards: list[float] = []
@@ -214,9 +206,6 @@ def run_task(task, client: Optional[Any]) -> float:
 def main() -> None:
     tasks = resolve_tasks(TASK_SELECTOR)
     client = build_openai_client()
-
-    if client is None:
-        print("[stderr] HF_TOKEN/API_KEY not set; using offline advisor.", file=sys.stderr, flush=True)
 
     scores: list[float] = []
     for task in tasks:

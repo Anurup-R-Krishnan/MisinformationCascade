@@ -1,16 +1,3 @@
----
-title: Misinformation Cascade Env
-emoji: 🛡️
-colorFrom: red
-colorTo: blue
-sdk: docker
-pinned: false
-app_port: 8000
-base_path: /web
-tags:
-  - openenv
----
-
 # Misinformation Cascade Env
 
 An OpenEnv environment for strategic containment of misinformation spread on a social graph.
