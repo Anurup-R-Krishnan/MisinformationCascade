@@ -110,11 +110,11 @@ Action costs:
 
 ## Task Success Thresholds
 
-Thresholds are calibrated from deterministic baseline runs (`evaluate --episodes 20`):
+Thresholds are calibrated from deterministic baseline runs (`evaluate --episodes 50`):
 
-- `easy`: `0.62` (greedy_containment avg: `0.7632`)
-- `medium`: `0.40` (greedy_containment avg: `0.4468`)
-- `hard`: `0.20` (greedy_containment avg: `0.1853`)
+- `easy`: `0.62` (greedy_containment avg: `0.7485`)
+- `medium`: `0.40` (greedy_containment avg: `0.4610`)
+- `hard`: `0.20` (greedy_containment avg: `0.2085`)
 
 This keeps all three tasks non-trivial while aligning success criteria with observed
 graph-topology difficulty and budget constraints.
@@ -162,7 +162,7 @@ Behavior:
 ## Benchmarking
 
 ```bash
-python -m misinformation_cascade_env.evaluate --episodes 20
+python -m misinformation_cascade_env.evaluate --episodes 50
 cat artifacts/benchmark_results.json
 ```
 
@@ -234,10 +234,10 @@ uv run server --port 8000
 openenv validate --url http://localhost:8000
 
 # 5) Regenerate benchmark artifact
-python -m misinformation_cascade_env.evaluate --episodes 20 --output artifacts/benchmark_results.json
+python -m misinformation_cascade_env.evaluate --episodes 50 --output artifacts/benchmark_results.json
 
 # 6) Regenerate real-world KPI artifact
-python -m misinformation_cascade_env.evaluate_realworld --episodes 20 --output artifacts/real_world_kpi_results.json
+python -m misinformation_cascade_env.evaluate_realworld --episodes 50 --output artifacts/real_world_kpi_results.json
 
 # 7) Run inference entrypoint with required env variables
 API_BASE_URL=https://router.huggingface.co/v1 \

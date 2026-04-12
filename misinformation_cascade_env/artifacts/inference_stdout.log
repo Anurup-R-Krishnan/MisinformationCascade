@@ -4,36 +4,23 @@
 [STEP] step=3 action=quarantine('n_9') reward=0.79 done=true error=null
 [END] success=true steps=3 score=0.775 rewards=0.11,0.25,0.79
 [START] task=cascade-medium env=misinformation_cascade_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=quarantine('n_4') reward=0.10 done=false error=null
-[STEP] step=2 action=quarantine('n_7') reward=0.00 done=false error=null
-[STEP] step=3 action=quarantine('n_16') reward=0.10 done=false error=null
-[STEP] step=4 action=quarantine('n_23') reward=0.11 done=false error=null
-[STEP] step=5 action=wait() reward=0.02 done=false error=null
-[STEP] step=6 action=wait() reward=-0.05 done=false error=null
-[STEP] step=7 action=wait() reward=-0.05 done=false error=null
-[STEP] step=8 action=wait() reward=0.00 done=false error=null
-[STEP] step=9 action=wait() reward=-0.01 done=false error=null
-[STEP] step=10 action=wait() reward=-0.04 done=false error=null
-[STEP] step=11 action=wait() reward=0.00 done=false error=null
-[STEP] step=12 action=wait() reward=0.00 done=false error=null
-[STEP] step=13 action=wait() reward=0.00 done=false error=null
-[STEP] step=14 action=wait() reward=0.00 done=false error=null
-[STEP] step=15 action=wait() reward=0.00 done=false error=null
-[STEP] step=16 action=wait() reward=0.00 done=false error=null
-[STEP] step=17 action=wait() reward=0.00 done=false error=null
-[STEP] step=18 action=wait() reward=0.00 done=false error=null
-[STEP] step=19 action=wait() reward=0.00 done=false error=null
-[STEP] step=20 action=wait() reward=1.00 done=true error=null
-[END] success=true steps=20 score=0.757 rewards=0.10,0.00,0.10,0.11,0.02,-0.05,-0.05,0.00,-0.01,-0.04,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,1.00
+[STEP] step=1 action=factcheck('n_22') reward=0.00 done=false error=null
+[STEP] step=2 action=factcheck('n_22') reward=0.00 done=false error=null
+[STEP] step=3 action=factcheck('n_22') reward=0.00 done=false error=null
+[STEP] step=4 action=factcheck('n_22') reward=0.00 done=false error=null
+[STEP] step=5 action=quarantine('n_4') reward=0.05 done=false error=null
+[STEP] step=6 action=quarantine('n_7') reward=0.05 done=false error=null
+[STEP] step=7 action=quarantine('n_16') reward=0.04 done=false error=null
+[STEP] step=8 action=factcheck('n_33') reward=1.00 done=true error=null
+[END] success=true steps=8 score=0.763 rewards=0.00,0.00,0.00,0.00,0.05,0.05,0.04,1.00
 [START] task=cascade-hard env=misinformation_cascade_env model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action=quarantine('n_1') reward=0.06 done=false error=null
-[STEP] step=2 action=quarantine('n_9') reward=0.09 done=false error=null
-[STEP] step=3 action=quarantine('n_21') reward=-0.07 done=false error=null
-[STEP] step=4 action=quarantine('n_23') reward=0.01 done=false error=null
-[STEP] step=5 action=wait() reward=-0.04 done=false error=null
-[STEP] step=6 action=wait() reward=0.02 done=false error=null
-[STEP] step=7 action=wait() reward=-0.02 done=false error=null
-[STEP] step=8 action=wait() reward=0.02 done=false error=null
-[STEP] step=9 action=wait() reward=0.00 done=false error=null
-[STEP] step=10 action=wait() reward=0.06 done=true error=null
-[END] success=false steps=10 score=0.094 rewards=0.06,0.09,-0.07,0.01,-0.04,0.02,-0.02,0.02,0.00,0.06
+[STEP] step=1 action=factcheck('n_20') reward=0.00 done=false error=null
+[STEP] step=2 action=factcheck('n_6') reward=0.00 done=false error=null
+[STEP] step=3 action=factcheck('n_6') reward=0.00 done=false error=null
+[STEP] step=4 action=factcheck('n_6') reward=0.00 done=false error=null
+[STEP] step=5 action=quarantine('n_3') reward=0.10 done=false error=null
+[STEP] step=6 action=quarantine('n_0') reward=0.06 done=false error=null
+[STEP] step=7 action=quarantine('n_2') reward=0.06 done=false error=null
+[STEP] step=8 action=factcheck('n_25') reward=0.00 done=false error=null
+[STEP] step=9 action=wait() reward=0.22 done=true error=null
+[END] success=true steps=9 score=0.216 rewards=0.00,0.00,0.00,0.00,0.10,0.06,0.06,0.00,0.22

@@ -38,7 +38,7 @@ TASKS: tuple[CascadeTask, ...] = (
         task_id="cascade-medium",
         difficulty="medium",
         seed=TASK_SEEDS["medium"],
-        # Calibrated from deterministic 20-episode baseline runs.
+        # Calibrated from deterministic 50-episode baseline runs.
         success_threshold=0.40,
         description="Balance budget vs spread on a denser medium-sized graph.",
     ),
@@ -46,7 +46,7 @@ TASKS: tuple[CascadeTask, ...] = (
         task_id="cascade-hard",
         difficulty="hard",
         seed=TASK_SEEDS["hard"],
-        # Calibrated from deterministic 20-episode baseline runs.
+        # Calibrated from deterministic 50-episode baseline runs.
         success_threshold=0.20,
         description="Handle hub-heavy graph dynamics with periodic external seeding.",
     ),

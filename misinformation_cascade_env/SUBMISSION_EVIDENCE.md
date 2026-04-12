@@ -19,7 +19,7 @@ This checklist maps the published requirements and judging rubric to concrete, r
 
 - Baseline reproduces
   - Command: `.venv/bin/python -m misinformation_cascade_env.inference`
-  - Runtime evidence: `artifacts/inference_stderr.log` includes `elapsed_s=2.38` and `exit_code=0`.
+  - Runtime evidence: `artifacts/inference_stderr.log` includes deterministic aggregate output (`aggregate_avg_score=...`) with offline-advisor fallback note when tokens are not configured.
   - Structured logs evidence: `artifacts/inference_stdout.log` contains strict `[START]`, `[STEP]`, `[END]` lines.
 
 - 3+ tasks with graders
@@ -101,10 +101,10 @@ This checklist maps the published requirements and judging rubric to concrete, r
 .venv/bin/openenv validate --url http://127.0.0.1:8000
 
 # benchmark and reports
-.venv/bin/python -m misinformation_cascade_env.evaluate --episodes 20 --output artifacts/benchmark_results.json
+.venv/bin/python -m misinformation_cascade_env.evaluate --episodes 50 --output artifacts/benchmark_results.json
 
 # real-world KPI report
-.venv/bin/python -m misinformation_cascade_env.evaluate_realworld --episodes 20 --output artifacts/real_world_kpi_results.json
+.venv/bin/python -m misinformation_cascade_env.evaluate_realworld --episodes 50 --output artifacts/real_world_kpi_results.json
 
 # baseline inference
 .venv/bin/python -m misinformation_cascade_env.inference
