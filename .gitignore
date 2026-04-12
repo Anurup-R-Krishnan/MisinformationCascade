@@ -1,5 +1,6 @@
 .agents/
 venv
+.codex
 .codex/
 __pycache__
 .venv/
@@ -10,3 +11,12 @@ dist/
 *.pyc
 *.pyo
 .DS_Store
+
+# Local/generated submission artifacts
+misinformation_cascade_env/artifacts/*.log
+misinformation_cascade_env/artifacts/pre_validation.log
+
+# Optional docs/notebook-like notes (keep README files tracked)
+misinformation_cascade_env/SUBMISSION_EVIDENCE.md
+misinformation_cascade_env/REAL_WORLD_USE_CASES.md
+misinformation_cascade_env/BENCHMARK_REPORT.md
