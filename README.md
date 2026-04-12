@@ -13,135 +13,156 @@ tags:
 
 # Misinformation Cascade Env
 
-A real-world OpenEnv benchmark for **misinformation containment** on social networks under budget and uncertainty.
+A real-world OpenEnv benchmark for RL agents and LLMs performing **misinformation containment** under budget, uncertainty, and graph-driven spread dynamics.
 
-## Submission Snapshot
+Built for the **Meta × Hugging Face × PyTorch OpenEnv Hackathon 2026**.
 
-- Live Space: `https://itsmeamario-misinformation-cascade-openenv.hf.space`
-- Root-level submission files are present:
-  - `openenv.yaml`
-  - `inference.py`
-  - `Dockerfile`
-  - `validate-submission.sh`
-- Latest local pre-validation: `misinformation_cascade_env/artifacts/pre_validation.log` (3/3 checks passed)
+## Table of Contents
 
-Core simulator and implementation details live in `misinformation_cascade_env/`.
+1. Environment Description & Motivation
+2. Observation & Action Space
+3. Task Descriptions & Difficulty
+4. Inference & Results
+5. Visual Workflow
+6. Setup & Usage Instructions
+7. System Architecture
+8. Project Structure
+9. Pre-Validation Results
+10. Team
 
-## Why This Is Real-World (Not Toy)
+## 1. Environment Description & Motivation
 
-The environment models trust-and-safety operations where interventions are limited and delayed decisions are costly.
+### Overview
 
-- Actions map to practical moderation levers (`FACTCHECK`, `QUARANTINE`, `INOCULATE`, `BOOST_CORRECTION`).
-- Infection can be hidden (`LATENT`) before becoming visible (`CONFIRMED_INFECTED`).
-- Budget and step limits force strategic trade-offs instead of brute-force behavior.
+`Misinformation Cascade Env` simulates a trust-and-safety triage workflow over a social graph. At each step, the agent observes high-impact nodes, current infections, and at-risk users, then chooses one intervention action. Hidden latent spread can later become confirmed harm, so delayed or wasteful actions reduce final outcomes.
 
-## Action and Observation Space
+### Motivation
 
-Typed models are in `misinformation_cascade_env/models.py`.
+Real moderation teams face limited intervention capacity and noisy prioritization. This environment was designed to capture those constraints in a form suitable for agent training and evaluation:
 
-### Action Space (`CascadeAction`)
+- finite budget with action cost trade-offs
+- partial observability (`LATENT` progression)
+- topology-aware spread dynamics (random graphs vs hub-heavy graphs)
+- deterministic task seeds for reproducible benchmarking
+
+## 2. Observation & Action Space
+
+Typed models are implemented with Pydantic in `misinformation_cascade_env/models.py`.
+
+### 2.1 Observation Space (`CascadeObservation`)
+
+Per-step observation includes:
+
+- `top_nodes`: highest influence nodes (risk-priority candidates)
+- `confirmed_infected`: visible active spreaders
+- `at_risk_nodes`: exposed nodes likely to convert from latent state
+- resource counters: `budget_remaining`, `step`, `max_steps`, `steps_remaining`
+- spread feedback: `spread_delta_last_step`, `last_action_effect`
+- trajectory values: `reward`, `done`
+
+### 2.2 Action Space (`CascadeAction`)
+
+The agent emits one action per step:
 
 | Action | Cost | Purpose |
 |---|---:|---|
-| `WAIT` | 0 | No intervention |
+| `WAIT` | 0 | Skip intervention |
 | `FACTCHECK` | 1 | Low-cost targeted correction |
-| `BOOST_CORRECTION` | 2 | Amplify correction effect |
+| `BOOST_CORRECTION` | 2 | Raise correction pressure |
 | `INOCULATE` | 3 | Preemptive protection |
 | `QUARANTINE` | 5 | Hard containment |
 
-### Observation Space (`CascadeObservation`)
+## 3. Task Descriptions & Difficulty
 
-Each step returns structured state including:
+Three deterministic tasks are included (easy -> medium -> hard), each with fixed seed and grader threshold.
 
-- `top_nodes`, `confirmed_infected`, `at_risk_nodes`
-- budget and step counters
-- `spread_delta_last_step`, `last_action_effect`
-- `reward`, `done`
+| Task ID | Difficulty | Seed | Goal | Success Threshold |
+|---|---:|---:|---|---:|
+| `cascade-easy` | easy | 42 | Early containment on smaller graph | 0.62 |
+| `cascade-medium` | medium | 137 | Balance budget vs wider spread surface | 0.40 |
+| `cascade-hard` | hard | 512 | Contain hub-heavy + external seeding dynamics | 0.20 |
 
-## Tasks and Graders
+Graders are deterministic and return scores in `[0.0, 1.0]` (`misinformation_cascade_env/task_grader.py`).
 
-Three deterministic tasks are shipped (easy -> medium -> hard):
+## 4. Inference & Results
 
-| Task ID | Difficulty | Seed | Success Threshold |
-|---|---:|---:|---:|
-| `cascade-easy` | easy | 42 | 0.62 |
-| `cascade-medium` | medium | 137 | 0.40 |
-| `cascade-hard` | hard | 512 | 0.20 |
+The required root inference script is:
 
-Grading contract:
+- `inference.py`
 
-- `grade_episode(...)` returns deterministic score in `[0.0, 1.0]`
-- `is_task_success(...)` applies task threshold
-- implementation: `misinformation_cascade_env/task_grader.py`
+Latest baseline run (offline advisor fallback, no API key configured):
 
-Additional quality tests:
+- `cascade-easy`: success=true, steps=3
+- `cascade-medium`: success=true, steps=8
+- `cascade-hard`: success=true, steps=9
+- aggregate average score: `0.5847`
 
-- deterministic grading trace
-- grader non-constant behavior checks
-- difficulty progression checks
-
-## Reward Design
-
-The reward function provides both trajectory and outcome signal:
-
-- dense non-terminal shaping for incremental containment progress
-- terminal counterfactual score in `[0.0, 1.0]` vs no-action trajectory
-- natural penalty for wasted/invalid actions via consumed steps and missed containment
-
-## Round 1 Requirement Mapping
-
-| Requirement | Status | Evidence |
-|---|---|---|
-| Real-world utility | Pass | Misinformation containment workflow and budgeted interventions |
-| OpenEnv spec compliance | Pass | `openenv validate` and typed models |
-| 3+ tasks with graders | Pass | `cascade-easy`, `cascade-medium`, `cascade-hard` |
-| Meaningful reward shaping | Pass | dense + terminal counterfactual reward |
-| Baseline inference script | Pass | root `inference.py` with OpenAI client |
-| HF Space + Docker | Pass | live Space + root Dockerfile |
-
-## Quick Start
-
-### 1) Static validation
-
-```bash
-./venv/bin/openenv validate
-```
-
-### 2) Run baseline inference (required entrypoint)
-
-```bash
-API_BASE_URL=https://router.huggingface.co/v1 \
-MODEL_NAME=Qwen/Qwen2.5-72B-Instruct \
-HF_TOKEN=<token> \
-./venv/bin/python inference.py
-```
-
-Required structured logs:
+Structured log format emitted:
 
 - `[START] task=... env=... model=...`
 - `[STEP] step=... action=... reward=... done=... error=...`
 - `[END] success=... steps=... rewards=...`
 
-### 3) Docker build/run
+## 5. Visual Workflow
+
+The OpenEnv web interface is available when the server is running:
+
+- `/web` for interactive step/reset exploration
+- `/docs` for OpenAPI endpoint exploration
+
+This allows manual inspection of node states, intervention effects, and reward behavior during an episode.
+
+## 6. Setup & Usage Instructions
+
+### 6.1 Build and Run Docker Container
 
 ```bash
+# Build (root-level Dockerfile used by validator)
 docker build -t misinformation-cascade-openenv .
+
+# Run
 docker run --rm -p 8000:8000 misinformation-cascade-openenv
 ```
 
-## Pre-Submission Validator
+### 6.2 Run Baseline Inference
+
+```bash
+API_BASE_URL=https://router.huggingface.co/v1 \
+MODEL_NAME=Qwen/Qwen2.5-72B-Instruct \
+HF_TOKEN=<your_token> \
+./venv/bin/python inference.py
+```
+
+### 6.3 Validate Submission Contract
 
 ```bash
 ./validate-submission.sh https://itsmeamario-misinformation-cascade-openenv.hf.space .
 ```
 
-The script checks:
+## 7. System Architecture
 
-1. Space `/reset` responds with HTTP 200
-2. Docker build succeeds
-3. `openenv validate` passes
+```text
++-------------------------------------------------------------+
+|                     OpenEnv Client Loop                     |
+|           (LLM / policy -> inference.py -> HTTP)           |
++-------------------------------+-----------------------------+
+                                |
+                                v
++-------------------------------------------------------------+
+|                FastAPI OpenEnv Environment Server           |
+|                         server/app.py                       |
++-------------------------------+-----------------------------+
+                                |
+                                v
++-------------------------------------------------------------+
+|             Misinformation Cascade Simulation Core          |
+|        env.py + graph_generator.py + task_grader.py        |
+|                                                             |
+|  Graph State -> Spread Dynamics -> Action Effects -> Reward |
++-------------------------------------------------------------+
+```
 
-## Repo Layout
+## 8. Project Structure
 
 ```text
 openenvHackathon/
@@ -152,5 +173,29 @@ openenvHackathon/
 ├── pyproject.toml
 ├── validate-submission.sh
 ├── server/
+│   ├── app.py
+│   └── misinformation_cascade_env_environment.py
 └── misinformation_cascade_env/
+    ├── env.py
+    ├── models.py
+    ├── task_grader.py
+    ├── offline_advisor.py
+    ├── tests/
+    └── artifacts/
 ```
+
+## 9. Pre-Validation Results
+
+Current status: **3/3 checks passed**.
+
+- HF Space `/reset` responded with HTTP 200
+- Docker build succeeded
+- `openenv validate` passed
+
+Evidence log:
+
+- `misinformation_cascade_env/artifacts/pre_validation.log`
+
+## 10. Team
+
+- Anurup R Krishnan

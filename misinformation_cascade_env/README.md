@@ -169,7 +169,7 @@ Behavior:
 - Emits strict logs:
   - `[START] task=... env=... model=...`
   - `[STEP] step=... action=... reward=... done=... error=...`
-  - `[END] success=... steps=... score=... rewards=...`
+  - `[END] success=... steps=... rewards=...`
 
 ## Benchmarking
 
@@ -178,15 +178,11 @@ python -m misinformation_cascade_env.evaluate --episodes 50
 cat artifacts/benchmark_results.json
 ```
 
-Latest benchmark snapshot: `BENCHMARK_REPORT.md`
-
 Real-world KPI evaluation:
 
 ```bash
 python -m misinformation_cascade_env.evaluate_realworld --episodes 20 --output artifacts/real_world_kpi_results.json
 ```
-
-Use-case and KPI mapping reference: `REAL_WORLD_USE_CASES.md`
 
 ## Docker
 
@@ -223,12 +219,10 @@ or fully observable toy tasks do not.
 - Core simulator logic: `env.py`
 - Deterministic graph and null trajectory generation: `graph_generator.py`
 - Tasks and grading policy: `task_grader.py`
-- Compliance tests: `tests/test_submission_contract.py`, `tests/test_cascade_env.py`
-- Reproducibility artifacts: `artifacts/benchmark_results.json`, `BENCHMARK_REPORT.md`,
+- Compliance tests: `tests/test_submission_contract.py`, `tests/test_cascade_env.py`, `tests/test_grader_quality.py`
+- Reproducibility artifacts: `artifacts/benchmark_results.json`,
   `artifacts/inference_stdout.log`, `artifacts/inference_stderr.log`,
   `artifacts/real_world_kpi_results.json`
-- Real-world use-case mapping: `REAL_WORLD_USE_CASES.md`
-- Requirement-to-evidence mapping: `SUBMISSION_EVIDENCE.md`
 
 ## Reproducible Validation Runbook
 
