@@ -118,7 +118,8 @@ class MisinformationCascadeEnv:
         )
 
         return self._build_observation(
-            last_action_effect="Episode started. Misinformation is spreading. Contain it."
+            last_action_effect="Episode started. Misinformation is spreading. Contain it.",
+            reward=clamp_score(0.0),
         )
 
     def step(self, action: CascadeAction) -> CascadeObservation:
@@ -570,6 +571,9 @@ class MisinformationCascadeEnv:
                 f" | WARNING: {len(isolated_components)} isolated infected component(s) exists. "
                 f"Spread is silent—no AT_RISK nodes surface. Silent damage continues."
             )
+
+        # Validator requires ALL observation rewards in strict (0, 1).
+        reward = clamp_score(reward)
 
         return self._build_observation(
             last_action_effect=effect,
