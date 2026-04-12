@@ -1,5 +1,18 @@
 {
   "episodes": 20,
+  "generated_at_utc": "2026-04-12T05:50:46.608908+00:00",
+  "python_version": "3.14.4",
+  "platform": "Linux-6.19.11-1-cachyos-x86_64-with-glibc2.43",
+  "policies": [
+    "wait",
+    "random",
+    "greedy_containment"
+  ],
+  "difficulties": [
+    "easy",
+    "medium",
+    "hard"
+  ],
   "results": {
     "wait": {
       "easy": {

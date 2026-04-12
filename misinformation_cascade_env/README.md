@@ -15,6 +15,17 @@ tags:
 
 An OpenEnv environment for strategic containment of misinformation spread on a social graph.
 
+## Why This Environment Matters
+
+This environment models a real operational problem: deciding scarce moderation interventions
+under uncertainty while harmful content propagates through influence networks.
+
+- Real-world analogue: trust-and-safety triage, public-health style counter-messaging,
+  and rapid-response risk control.
+- Non-toy decisions: every action consumes finite budget and has opportunity cost.
+- Consequential dynamics: delayed intervention shifts outcomes due to latent-to-confirmed
+  infection progression and network topology.
+
 ## Round-1 Tasks (Easy -> Medium -> Hard)
 
 This environment ships with three deterministic tasks and programmatic graders:
@@ -27,6 +38,20 @@ Task definitions and grader logic live in `task_grader.py`:
 
 - `grade_episode(...)` returns a deterministic normalized score in `[0.0, 1.0]`.
 - `is_task_success(...)` maps score to pass/fail with task-specific thresholds.
+
+### Task Quality and Difficulty Progression
+
+- `easy`: small Erdos-Renyi graph where strong early containment can fully suppress spread.
+- `medium`: denser graph with tighter budget pressure and lower intervention margin.
+- `hard`: hub-heavy Barabasi-Albert topology plus periodic external seeding,
+  forcing trade-offs between local suppression and hub-level control.
+
+Each task has:
+
+- fixed seed for reproducibility,
+- deterministic grader logic,
+- explicit success threshold,
+- 0.0-1.0 score output suitable for automated evaluation.
 
 ## Environment Objective
 
@@ -70,11 +95,29 @@ Action costs:
   - saturation mercy threshold with zero budget
   - max step horizon
 
+### Why the Reward Is Useful for Learning
+
+- Dense trajectory signal: non-terminal reward captures incremental containment progress.
+- Outcome signal: terminal reward measures counterfactual containment vs no-action baseline.
+- Behavioral pressure: inefficient or delayed actions create negative/low intermediate reward,
+  discouraging random or looping behavior.
+
 ## Difficulty Presets
 
 - `easy`: 20 nodes, 3 seed infections, 15 steps, Erdos-Renyi
 - `medium`: 35 nodes, 5 seed infections, 20 steps, Erdos-Renyi
 - `hard`: 50 nodes, 7 seed infections, 25 steps, Barabasi-Albert + external seeding
+
+## Task Success Thresholds
+
+Thresholds are calibrated from deterministic baseline runs (`evaluate --episodes 20`):
+
+- `easy`: `0.62` (greedy_containment avg: `0.7632`)
+- `medium`: `0.40` (greedy_containment avg: `0.4468`)
+- `hard`: `0.20` (greedy_containment avg: `0.1853`)
+
+This keeps all three tasks non-trivial while aligning success criteria with observed
+graph-topology difficulty and budget constraints.
 
 ## Local Development
 
@@ -125,6 +168,14 @@ cat artifacts/benchmark_results.json
 
 Latest benchmark snapshot: `BENCHMARK_REPORT.md`
 
+Real-world KPI evaluation:
+
+```bash
+python -m misinformation_cascade_env.evaluate_realworld --episodes 20 --output artifacts/real_world_kpi_results.json
+```
+
+Use-case and KPI mapping reference: `REAL_WORLD_USE_CASES.md`
+
 ## Docker
 
 ```bash
@@ -142,3 +193,55 @@ openenv push
 
 - Deterministic graph generation and null trajectory from fixed seeds.
 - Internal audit state available from `/state` for replay and debugging.
+
+## Creativity and Novelty
+
+This benchmark combines mechanics not typically present together in lightweight OpenEnv tasks:
+
+- Hidden progression dynamics (`LATENT` -> `CONFIRMED_INFECTED`) with partial observability.
+- Counterfactual scoring against a seeded null trajectory for outcome-grounded reward.
+- Graph-topology-aware difficulty escalation (random graph vs hub-dominant graph).
+- Intervention economics where each action class has distinct cost and strategic role.
+
+These mechanics make failure modes and policy quality visible in a way that single-step
+or fully observable toy tasks do not.
+
+## Human Review Quick Links
+
+- Core simulator logic: `env.py`
+- Deterministic graph and null trajectory generation: `graph_generator.py`
+- Tasks and grading policy: `task_grader.py`
+- Compliance tests: `tests/test_submission_contract.py`, `tests/test_cascade_env.py`
+- Reproducibility artifacts: `artifacts/benchmark_results.json`, `BENCHMARK_REPORT.md`,
+  `artifacts/inference_stdout.log`, `artifacts/inference_stderr.log`,
+  `artifacts/real_world_kpi_results.json`
+- Real-world use-case mapping: `REAL_WORLD_USE_CASES.md`
+- Requirement-to-evidence mapping: `SUBMISSION_EVIDENCE.md`
+
+## Reproducible Validation Runbook
+
+```bash
+# 1) Install dependencies
+uv sync
+
+# 2) Run tests
+pytest tests/ -v
+
+# 3) Start local server
+uv run server --port 8000
+
+# 4) In another terminal, validate OpenEnv contract
+openenv validate --url http://localhost:8000
+
+# 5) Regenerate benchmark artifact
+python -m misinformation_cascade_env.evaluate --episodes 20 --output artifacts/benchmark_results.json
+
+# 6) Regenerate real-world KPI artifact
+python -m misinformation_cascade_env.evaluate_realworld --episodes 20 --output artifacts/real_world_kpi_results.json
+
+# 7) Run inference entrypoint with required env variables
+API_BASE_URL=https://router.huggingface.co/v1 \
+MODEL_NAME=Qwen/Qwen2.5-72B-Instruct \
+HF_TOKEN=<token> \
+python inference.py
+```
