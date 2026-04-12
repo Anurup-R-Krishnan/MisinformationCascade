@@ -15,6 +15,18 @@ tags:
 
 An OpenEnv environment for strategic containment of misinformation spread on a social graph.
 
+## Submission Note
+
+The canonical hackathon submission entrypoints are at repository root:
+
+- `README.md`
+- `openenv.yaml`
+- `inference.py`
+- `Dockerfile`
+- `validate-submission.sh`
+
+This `misinformation_cascade_env/README.md` documents the implementation internals.
+
 ## Why This Environment Matters
 
 This environment models a real operational problem: deciding scarce moderation interventions
