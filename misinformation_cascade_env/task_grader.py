@@ -15,7 +15,7 @@ except ImportError:
     from models import STARTING_BUDGET, TASK_CONFIG, TASK_SEEDS, CascadeObservation
 
 # Phase-2 validator requires strict (0, 1).  Wide margin for safety.
-SCORE_EPSILON: float = 1e-2
+SCORE_EPSILON: float = 1e-6
 
 
 def clamp_score(value: float) -> float:
@@ -86,8 +86,7 @@ def resolve_tasks(selector: str | None) -> list[CascadeTask]:
         task = _BY_ID.get(key) or _BY_DIFF.get(key)
         if task is None:
             raise ValueError(
-                f"Unknown task selector '{key}'. "
-                f"Valid: {sorted([*_BY_ID, *_BY_DIFF])}"
+                f"Unknown task selector '{key}'. Valid: {sorted([*_BY_ID, *_BY_DIFF])}"
             )
         if task.task_id not in seen:
             selected.append(task)
@@ -121,10 +120,7 @@ def grade_episode(
     stability = _sat(1.0 - sum(r < 0 for r in rewards) / n)
 
     raw = (
-        0.70 * terminal
-        + 0.15 * (1.0 - infection)
-        + 0.10 * resource
-        + 0.05 * stability
+        0.70 * terminal + 0.15 * (1.0 - infection) + 0.10 * resource + 0.05 * stability
     )
     return round(clamp_score(raw), 4)
 
