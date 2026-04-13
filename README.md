@@ -148,22 +148,36 @@ HF_TOKEN=<your_token> \
 ## 8. Project Structure
 
 ```text
-openenvHackathon/
+misinformation_cascade/              ← repo root
+├── .gitignore
 ├── Dockerfile
 ├── README.md
-├── inference.py
+├── inference.py                     ← entrypoint shim
 ├── openenv.yaml
 ├── pyproject.toml
+├── uv.lock
 ├── validate-submission.sh
-├── server/
-│   ├── app.py
-│   └── misinformation_cascade_env_environment.py
-└── misinformation_cascade_env/
-    ├── env.py
+└── misinformation_cascade_env/      ← Python package
+    ├── __init__.py
     ├── models.py
+    ├── client.py
+    ├── env.py
+    ├── graph_generator.py
     ├── task_grader.py
+    ├── prompt_utils.py
+    ├── inference.py
+    ├── evaluate.py
+    ├── evaluate_realworld.py
+    ├── server/
+    │   ├── __init__.py
+    │   ├── app.py
+    │   └── misinformation_cascade_env_environment.py
     ├── tests/
+    │   ├── test_cascade_env.py
+    │   ├── test_grader_quality.py
+    │   └── test_submission_contract.py
     └── artifacts/
+        └── .gitkeep
 ```
 
 ## 9. Pre-Validation Results

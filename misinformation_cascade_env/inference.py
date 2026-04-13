@@ -26,6 +26,11 @@ except ImportError:
     from prompt_utils import SYSTEM_PROMPT, build_user_prompt, parse_action_payload
     from task_grader import clamp_score, grade_episode, is_task_success, resolve_tasks
 
+
+def sanitize_log_value(value: str) -> str:
+    """Compact newlines and tabs in a log value for single-line output."""
+    return value.replace("\n", " ").replace("\t", " ").replace("\r", " ")
+
 # ── Config ────────────────────────────────────────────────────────────────
 
 HF_TOKEN = os.getenv("HF_TOKEN")
