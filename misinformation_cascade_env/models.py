@@ -174,7 +174,7 @@ class CascadeObservation(Observation):
     spread_delta_last_step: int = Field(ge=0)
     last_action_effect: str
 
-    reward: float = Field(default=0.0)
+    reward: Optional[float] = Field(default=0.0)
     done: bool = Field(default=False)
 
     @computed_field
