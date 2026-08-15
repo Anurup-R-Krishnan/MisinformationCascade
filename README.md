@@ -11,11 +11,31 @@ tags:
   - openenv
 ---
 
-# Misinformation Cascade Env
+<div align="center">
+
+# 🛡️ Misinformation Cascade Env
+
+### A deterministic OpenEnv benchmark for containment under pressure
+
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-environment%20server-009688?style=for-the-badge&logo=fastapi&logoColor=white)](misinformation_cascade_env/server/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](Dockerfile)
+[![OpenEnv](https://img.shields.io/badge/OpenEnv-benchmark-8E44AD?style=for-the-badge)](openenv.yaml)
+[![Tests](https://img.shields.io/badge/tests-Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](misinformation_cascade_env/tests/)
+[![License](https://img.shields.io/badge/license-not%20specified-lightgrey?style=for-the-badge)](#scope-and-boundaries)
+
+<p>
+  <a href="#environment-description--motivation">Environment</a> ·
+  <a href="#observation--action-space">Actions</a> ·
+  <a href="#setup--usage-instructions">Run it</a> ·
+  <a href="#scope-and-boundaries">Boundaries</a>
+</p>
+
+</div>
 
 A real-world OpenEnv benchmark for RL agents and LLMs performing **misinformation containment** under budget, uncertainty, and graph-driven spread dynamics.
 
-Built for the **Meta × Hugging Face × PyTorch OpenEnv Hackathon 2026**.
+Built for reproducible research and evaluation of agent policies under constrained interventions.
 
 
 ## 1. Environment Description & Motivation
@@ -180,18 +200,14 @@ misinformation_cascade/              ← repo root
         └── .gitkeep
 ```
 
-## 9. Pre-Validation Results
+## Scope and boundaries
 
-Current status: **3/3 checks passed**.
+- The graph, users, spread process, rewards, and task seeds are synthetic.
+- The environment is a benchmark and simulation; it does not moderate real platforms or make real-world safety decisions.
+- `inference.py` can call a hosted model through an OpenAI-compatible endpoint when credentials are supplied; no token is required to run the environment and tests.
+- Deployment or hosted-space status is intentionally not claimed here; validate the current target before relying on it.
+- No license file is currently included in the repository.
 
-- HF Space `/reset` responded with HTTP 200
-- Docker build succeeded
-- `openenv validate` passed
-
-Evidence log:
-
-- `misinformation_cascade_env/artifacts/pre_validation.log`
-
-## 10. Team
+## Team
 
 - Anurup R Krishnan
